@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { Navigation } from '@/components/navigation';
 import { supabase } from '@/lib/supabase';
 import { DashboardStats } from '@/lib/types';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -23,7 +22,10 @@ export default function Dashboard() {
     if (!loading && !user) {
       router.push('/');
     }
-  }, [user, loading, router]);
+    if (!loading && profile?.role !== 'administrateur') {
+      router.push('/ilots');
+    }
+  }, [user, profile, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -88,8 +90,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>

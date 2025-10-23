@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { Navigation } from '@/components/navigation';
 import { supabase } from '@/lib/supabase';
 import { Decaissement, Depense, Activite } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, DollarSign, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
@@ -23,7 +22,10 @@ export default function FinancesPage() {
     if (!loading && !user) {
       router.push('/');
     }
-  }, [user, loading, router]);
+    if (!loading && profile?.role !== 'administrateur') {
+      router.push('/ilots');
+    }
+  }, [user, profile, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -75,8 +77,6 @@ export default function FinancesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

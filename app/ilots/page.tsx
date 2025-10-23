@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { Navigation } from '@/components/navigation';
 import { supabase } from '@/lib/supabase';
 import { Ilot } from '@/lib/types';
 import dynamic from 'next/dynamic';
@@ -97,8 +96,6 @@ export default function IlotsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

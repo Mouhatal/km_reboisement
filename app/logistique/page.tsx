@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { Navigation } from '@/components/navigation';
 import { supabase } from '@/lib/supabase';
 import { Materiel, Ilot, Activite } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, AlertTriangle, Package } from 'lucide-react';
@@ -107,8 +106,6 @@ export default function LogistiquePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

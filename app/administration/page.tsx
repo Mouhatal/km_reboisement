@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { Navigation } from '@/components/navigation';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
 import { Users, Shield, UserCheck, X } from 'lucide-react';
@@ -54,8 +53,6 @@ export default function AdministrationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Administration</h1>

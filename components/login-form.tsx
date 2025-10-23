@@ -29,9 +29,9 @@ export function LoginForm() {
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-green-800 mb-2">
-            Suivi de Reboisement
+          PROJET DE REHABILITATION ET DE STABILISATION DES DUNES 
           </h1>
-          <p className="text-gray-600">Gestion de projet communautaire</p>
+          <p className="text-gray-600">SUR LE COTE NORD DE KEUR MASSAR (SENEGAL)</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
