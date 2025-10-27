@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import { Plus, Search, Download, Edit, Trash2, X, Leaf, AreaChart, BarChart3, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
+import { IlotsTable } from '@/components/ilots-table'; // Import the new IlotsTable component
 
 const MapComponent = dynamic(() => import('@/components/map-component').then(mod => ({ default: mod.MapComponent })), {
   ssr: false,
@@ -102,8 +103,8 @@ export default function IlotsPage() {
   };
 
   const totalSuperficie = ilots.reduce((sum, ilot) => sum + ilot.superficie_ha, 0);
-  const totalPlants = ilots.reduce((sum, ilot) => sum + (ilot.nombre_de_plants || 0), 0); // Added || 0
-  const tauxSurvieMoyen = ilots.length > 0 ? ilots.reduce((sum, ilot) => sum + (ilot.taux_de_survie || 0), 0) / ilots.length : 0; // Added || 0
+  const totalPlants = ilots.reduce((sum, ilot) => sum + (ilot.nombre_de_plants || 0), 0);
+  const tauxSurvieMoyen = ilots.length > 0 ? ilots.reduce((sum, ilot) => sum + (ilot.taux_de_survie || 0), 0) / ilots.length : 0;
 
   if (loading || !user) {
     return null;
@@ -219,73 +220,16 @@ export default function IlotsPage() {
                       }
                     }}
                   />
-                ) : filteredIlots.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">Aucun îlot trouvé</div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredIlots.map((ilot) => (
-                      <div key={ilot.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow flex flex-col">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-lg font-semibold text-gray-900">{ilot.nom}</h3>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => {
-                                setEditingIlot(ilot);
-                                setShowForm(true);
-                              }}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                            >
-                              <Edit size={18} />
-                            </button>
-                            {profile?.role === 'administrateur' && (
-                              <button
-                                onClick={() => handleDelete(ilot.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="space-y-2 text-sm flex-1">
-                          <p className="text-gray-700">
-                            <span className="font-medium">Superficie:</span> {ilot.superficie_ha} ha
-                          </p>
-                          <p className="text-gray-700">
-                            <span className="font-medium">Type de sol:</span> {ilot.type_de_sol}
-                          </p>
-                          <p className="text-gray-700">
-                            <span className="font-medium">Plants plantés:</span> {(ilot.nombre_de_plants || 0).toLocaleString()}
-                          </p>
-                          <p className="text-gray-700">
-                            <span className="font-medium">Plants survivants:</span> {(ilot.nombre_de_plants_survivants || 0).toLocaleString()}
-                          </p>
-                          <p className="text-gray-700 flex items-center space-x-1">
-                            <span className="font-medium">Taux de survie:</span>
-                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                              (ilot.taux_de_survie || 0) >= 70 ? 'bg-green-100 text-green-800' :
-                              (ilot.taux_de_survie || 0) >= 40 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {(ilot.taux_de_survie || 0).toFixed(1)}%
-                            </span>
-                          </p>
-                          <p className="text-gray-700">
-                            <span className="font-medium">Dernier suivi:</span> {format(new Date(ilot.date_de_suivi), 'dd/MM/yyyy')}
-                          </p>
-                          {ilot.observations && (
-                            <p className="text-gray-700">
-                              <span className="font-medium">Observations:</span> {ilot.observations}
-                            </p>
-                          )}
-                          <p className="text-gray-700 flex items-center space-x-1">
-                            <MapPin size={16} className="text-gray-500" />
-                            <span>{ilot.latitude}, {ilot.longitude}</span>
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <IlotsTable
+                    ilots={filteredIlots}
+                    onEdit={(ilot) => {
+                      setEditingIlot(ilot);
+                      setShowForm(true);
+                    }}
+                    onDelete={handleDelete}
+                    canDelete={profile?.role === 'administrateur'}
+                  />
                 )}
               </div>
             </div>
