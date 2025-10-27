@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
 import { Users, Shield, UserCheck, X } from 'lucide-react';
+import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
+import { format } from 'date-fns'; // Import format for date formatting
 
 export default function AdministrationPage() {
   const { user, profile, loading } = useAuth();
@@ -17,7 +19,7 @@ export default function AdministrationPage() {
     if (!loading && !user) {
       router.push('/');
     }
-    if (!loading && profile?.role !== 'administrateur') {
+    if (!loading && user && profile?.role !== 'administrateur') {
       router.push('/dashboard');
     }
   }, [user, profile, loading, router]);
@@ -60,29 +62,30 @@ export default function AdministrationPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Total Utilisateurs</h3>
-              <Users className="text-green-600" size={24} />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Administrateurs</h3>
-              <Shield className="text-blue-600" size={24} />
-            </div>
-            <p className="text-3xl font-bold text-blue-600">{stats.administrateurs}</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Enquêteurs</h3>
-              <UserCheck className="text-orange-600" size={24} />
-            </div>
-            <p className="text-3xl font-bold text-orange-600">{stats.enqueteurs}</p>
-          </div>
+          <StatCard
+            title="Total Utilisateurs"
+            value={stats.total}
+            icon={Users}
+            bgColor="bg-green-100"
+            textColor="text-green-800"
+            iconColor="text-green-600"
+          />
+          <StatCard
+            title="Administrateurs"
+            value={stats.administrateurs}
+            icon={Shield}
+            bgColor="bg-blue-100"
+            textColor="text-blue-800"
+            iconColor="text-blue-600"
+          />
+          <StatCard
+            title="Enquêteurs"
+            value={stats.enqueteurs}
+            icon={UserCheck}
+            bgColor="bg-orange-100"
+            textColor="text-orange-800"
+            iconColor="text-orange-600"
+          />
         </div>
 
         <div className="bg-white rounded-lg shadow">
@@ -97,21 +100,21 @@ export default function AdministrationPage() {
               <div className="text-center py-12 text-gray-500">Aucun utilisateur</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[600px] divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom complet</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Rôle</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date création</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom complet</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Rôle</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date création</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {profiles.map((prof) => (
                       <tr key={prof.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{prof.full_name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{prof.email}</td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{prof.full_name}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{prof.email}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
                             prof.role === 'administrateur'
                               ? 'bg-blue-100 text-blue-800'
@@ -120,8 +123,8 @@ export default function AdministrationPage() {
                             {prof.role === 'administrateur' ? 'Administrateur' : 'Enquêteur'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {new Date(prof.created_at).toLocaleDateString('fr-FR')}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          {format(new Date(prof.created_at), 'dd/MM/yyyy')}
                         </td>
                       </tr>
                     ))}
@@ -130,37 +133,6 @@ export default function AdministrationPage() {
               </div>
             )}
           </div>
-        </div>
-
-        <div className="mt-8 bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Informations Système</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-gray-600">Version de l&apos;application</span>
-              <span className="font-medium">1.0.0</span>
-            </div>
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-gray-600">Base de données</span>
-              <span className="font-medium">Supabase PostgreSQL</span>
-            </div>
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-gray-600">Framework</span>
-              <span className="font-medium">Next.js 13</span>
-            </div>
-            <div className="flex justify-between py-2">
-              <span className="text-gray-600">Statut système</span>
-              <span className="font-medium text-green-600">Opérationnel</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">Note importante</h3>
-          <p className="text-blue-800 text-sm">
-            Pour créer de nouveaux utilisateurs, utilisez l&apos;interface d&apos;administration Supabase.
-            Les utilisateurs doivent avoir un profil créé dans la table &apos;profiles&apos; avec leur rôle assigné
-            (administrateur ou enquêteur).
-          </p>
         </div>
       </div>
     </div>
