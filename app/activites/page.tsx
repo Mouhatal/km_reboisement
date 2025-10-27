@@ -88,18 +88,18 @@ export default function ActivitesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 lg:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 lg:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion des Activités</h1>
-            <p className="text-gray-600 mt-2">Suivi des activités communautaires</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Gestion des Activités</h1>
+            <p className="text-gray-600 mt-2 text-sm lg:text-base">Suivi des activités communautaires</p>
           </div>
           <button
             onClick={() => {
               setEditingActivite(null);
               setShowForm(true);
             }}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
           >
             <Plus size={20} />
             <span>Nouvelle Activité</span>

@@ -22,8 +22,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <Navigation />
-      <main className="flex-1 bg-gray-50">
-        {children}
+      <main className="flex-1 bg-gray-50 lg:ml-0 overflow-x-hidden">
+        <div className="lg:ml-0">
+          {children}
+        </div>
       </main>
     </div>
   );

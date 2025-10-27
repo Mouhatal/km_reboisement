@@ -192,11 +192,11 @@ export default function IlotsPage() {
                   <tbody className="divide-y divide-gray-200">
                     {filteredIlots.map((ilot) => (
                       <tr key={ilot.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{ilot.nom}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{ilot.superficie_ha} ha</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{ilot.type_de_sol}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{ilot.nombre_de_plants.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm font-medium text-gray-900">{ilot.nom}</td>
+                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">{ilot.superficie_ha} ha</td>
+                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">{ilot.type_de_sol}</td>
+                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">{ilot.nombre_de_plants.toLocaleString()}</td>
+                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
                             ilot.taux_de_survie >= 70 ? 'bg-green-100 text-green-800' :
                             ilot.taux_de_survie >= 40 ? 'bg-yellow-100 text-yellow-800' :
@@ -205,26 +205,28 @@ export default function IlotsPage() {
                             {ilot.taux_de_survie}%
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">
                           {format(new Date(ilot.date_de_suivi), 'dd/MM/yyyy')}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          <div className="flex items-center justify-end space-x-2">
+                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-right">
+                          <div className="flex items-center justify-end space-x-1 lg:space-x-2">
                             <button
                               onClick={() => {
                                 setEditingIlot(ilot);
                                 setShowForm(true);
                               }}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                              className="p-1 lg:p-2 text-blue-600 hover:bg-blue-50 rounded"
                             >
-                              <Edit size={16} />
+                              <Edit size={14} className="lg:hidden" />
+                              <Edit size={16} className="hidden lg:block" />
                             </button>
                             {profile?.role === 'administrateur' && (
                               <button
                                 onClick={() => handleDelete(ilot.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded"
+                                className="p-1 lg:p-2 text-red-600 hover:bg-red-50 rounded"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={14} className="lg:hidden" />
+                                <Trash2 size={16} className="hidden lg:block" />
                               </button>
                             )}
                           </div>

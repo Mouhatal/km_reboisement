@@ -90,10 +90,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>
-          <p className="text-gray-600 mt-2">Vue d&apos;ensemble du projet de reboisement</p>
+      <div className="max-w-7xl mx-auto px-4 py-4 lg:py-8">
+        <div className="mb-6 lg:mb-8">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tableau de bord</h1>
+          <p className="text-gray-600 mt-2 text-sm lg:text-base">Vue d&apos;ensemble du projet de reboisement</p>
         </div>
 
         {loadingData ? (
@@ -102,7 +102,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
               <StatCard
                 icon={MapPin}
                 title="Total Îlots"
@@ -129,7 +129,7 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
               <FinanceCard
                 title="Décaissements"
                 amount={stats?.total_decaissements || 0}
@@ -147,7 +147,7 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
               <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-4">Répartition des Îlots par Type de Sol</h2>
                 {ilotsByType.length > 0 ? (
