@@ -212,13 +212,7 @@ export default function IlotsPage() {
                       nombre_de_plants: i.nombre_de_plants,
                       taux_de_survie: i.taux_de_survie,
                     }))}
-                    onMarkerClick={(id) => {
-                      const ilot = ilots.find(i => i.id === id);
-                      if (ilot) {
-                        setEditingIlot(ilot);
-                        setShowForm(true);
-                      }
-                    }}
+                    // onMarkerClick a été retiré
                   />
                 ) : (
                   <IlotsTable

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -49,10 +49,10 @@ interface MapProps {
     taux_de_survie: number;
   }>;
   center?: [number, number];
-  onMarkerClick?: (id: string) => void;
+  // onMarkerClick a été retiré car l'utilisateur ne souhaite plus de modification au clic sur la carte
 }
 
-export function MapComponent({ markers, center, onMarkerClick }: MapProps) {
+export function MapComponent({ markers, center }: MapProps) {
   const defaultCenter: [number, number] = [14.6928, -17.4467]; // Dakar as a fallback
 
   // Calculate dynamic center if no specific center is provided and there are markers
@@ -65,6 +65,9 @@ export function MapComponent({ markers, center, onMarkerClick }: MapProps) {
     }
     return defaultCenter;
   })();
+
+  // Utiliser un ref pour chaque marqueur afin de contrôler son popup
+  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
 
   return (
     <MapContainer
@@ -82,8 +85,16 @@ export function MapComponent({ markers, center, onMarkerClick }: MapProps) {
           key={marker.id}
           position={[marker.latitude, marker.longitude]}
           icon={icon}
+          ref={el => {
+            if (el) markerRefs.current[marker.id] = el;
+          }}
           eventHandlers={{
-            click: () => onMarkerClick?.(marker.id),
+            mouseover: () => {
+              markerRefs.current[marker.id]?.openPopup();
+            },
+            mouseout: () => {
+              markerRefs.current[marker.id]?.closePopup();
+            },
           }}
         >
           <Popup>
