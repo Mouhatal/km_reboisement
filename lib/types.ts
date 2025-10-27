@@ -76,6 +76,7 @@ export interface Decaissement {
   montant: number;
   reference_bancaire: string;
   description: string | null;
+  recus: string[]; // Added for receipts/invoices
   created_by: string;
   created_at: string;
 }
@@ -85,9 +86,10 @@ export interface Depense {
   activite_id: string;
   montant: number;
   type_depense: string;
-  justificatif: string | null;
+  justificatif: string | null; // This field already exists, but we'll use 'recus' for consistency
   remarque: string | null;
   date: string;
+  recus: string[]; // Added for receipts/invoices
   created_by: string;
   created_at: string;
 }

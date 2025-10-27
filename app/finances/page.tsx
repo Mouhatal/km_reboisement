@@ -5,9 +5,10 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Decaissement, Depense, Activite } from '@/lib/types';
-import { Plus, Search, Download, Edit, Trash2, X, DollarSign, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { Plus, Search, Download, Edit, Trash2, X, DollarSign, TrendingUp, TrendingDown, AlertCircle, FileText, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
+import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage'; // Import storage utilities
 
 export default function FinancesPage() {
   const { user, profile, loading } = useAuth();
@@ -225,6 +226,7 @@ function DecaissementsTable({ decaissements, onEdit, onDelete, canDelete }: any)
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Référence</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</th>
             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Reçus</th>
             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -238,6 +240,26 @@ function DecaissementsTable({ decaissements, onEdit, onDelete, canDelete }: any)
               <td className="px-4 py-3 text-sm text-gray-600">{item.description || '-'}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-blue-600">
                 {item.montant.toLocaleString()} FCFA
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600">
+                {item.recus && item.recus.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {item.recus.map((url, index) => (
+                      <a
+                        key={`recu-${index}`}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-100"
+                      >
+                        <FileText size={14} />
+                        <span>Reçu {index + 1}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  '-'
+                )}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                 <div className="flex items-center justify-end space-x-2">
@@ -281,6 +303,7 @@ function DepensesTable({ depenses, onEdit, onDelete, canDelete }: any) {
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Remarque</th>
             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Reçus</th>
             <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -294,6 +317,26 @@ function DepensesTable({ depenses, onEdit, onDelete, canDelete }: any) {
               <td className="px-4 py-3 text-sm text-gray-600">{item.remarque || '-'}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-red-600">
                 {item.montant.toLocaleString()} FCFA
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600">
+                {item.recus && item.recus.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {item.recus.map((url, index) => (
+                      <a
+                        key={`recu-${index}`}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1 px-2 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium hover:bg-red-100"
+                      >
+                        <FileText size={14} />
+                        <span>Reçu {index + 1}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  '-'
+                )}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                 <div className="flex items-center justify-end space-x-2">
@@ -337,7 +380,9 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
     activite_id: item?.activite_id || '',
     type_depense: item?.type_depense || '',
     remarque: item?.remarque || '',
+    recus: item?.recus || [], // Existing receipts URLs
   });
+  const [newRecus, setNewRecus] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -354,17 +399,44 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
     if (data) setActivites(data);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<File[]>>) => {
+    if (e.target.files) {
+      setter(prev => [...prev, ...Array.from(e.target.files || [])]);
+    }
+  };
+
+  const removeExistingFile = (fileUrl: string) => {
+    setFormData(prev => ({
+      ...prev,
+      recus: prev.recus.filter(url => url !== fileUrl)
+    }));
+  };
+
+  const removeNewFile = (index: number) => {
+    setNewRecus(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
+      let uploadedRecuUrls: string[] = [...formData.recus];
+
+      // Upload new receipts
+      for (const file of newRecus) {
+        const filePath = generateUniqueFilePath('finance_recus', file.name);
+        const url = await uploadFileToSupabase(file, 'activite-documents', filePath); // Using 'activite-documents' bucket for now
+        if (url) uploadedRecuUrls.push(url);
+      }
+
       if (formType === 'decaissement') {
         const decaissementData = {
           date: formData.date,
           montant: formData.montant,
           reference_bancaire: formData.reference_bancaire,
           description: formData.description,
+          recus: uploadedRecuUrls,
           created_by: user?.id,
         };
 
@@ -380,6 +452,7 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
           activite_id: formData.activite_id || null,
           type_depense: formData.type_depense,
           remarque: formData.remarque,
+          recus: uploadedRecuUrls,
           created_by: user?.id,
         };
 
@@ -539,6 +612,41 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
               </div>
             </>
           )}
+
+          {/* Reçus/Factures Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Reçus/Factures</label>
+            <input
+              type="file"
+              multiple
+              onChange={(e) => handleFileChange(e, setNewRecus)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+            />
+            <div className="mt-2 space-y-1">
+              {formData.recus.map((url, index) => (
+                <div key={`existing-recu-${index}`} className="flex items-center justify-between bg-gray-50 p-2 rounded-md text-sm">
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center space-x-1">
+                    <FileText size={16} />
+                    <span>Reçu existant {index + 1}</span>
+                  </a>
+                  <button type="button" onClick={() => removeExistingFile(url)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50">
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+              {newRecus.map((file, index) => (
+                <div key={`new-recu-${index}`} className="flex items-center justify-between bg-green-50 p-2 rounded-md text-sm">
+                  <span className="text-green-700 flex items-center space-x-1">
+                    <Upload size={16} />
+                    <span>{file.name}</span>
+                  </span>
+                  <button type="button" onClick={() => removeNewFile(index)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50">
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="flex items-center justify-end space-x-4 pt-4">
             <button
