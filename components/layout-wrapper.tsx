@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/lib/auth-context';
-import { Navigation } from '@/components/navigation';
+import { TopNavigation } from '@/components/top-navigation'; // Import the new component
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -20,10 +20,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   // Si utilisateur connecté, afficher la navigation
   return (
-    <div className="flex min-h-screen">
-      <Navigation />
-      <main className="flex-1 bg-gray-50 lg:ml-0 overflow-x-hidden">
-        <div className="lg:ml-0">
+    <div className="flex flex-col min-h-screen">
+      <TopNavigation /> {/* Render the new top navigation */}
+      <main className="flex-1 bg-gray-50 overflow-x-hidden">
+        <div>
           {children}
         </div>
       </main>
