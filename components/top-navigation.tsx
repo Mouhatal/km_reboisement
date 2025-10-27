@@ -30,7 +30,7 @@ export function TopNavigation() {
               href={profile?.role === 'administrateur' ? '/dashboard' : '/ilots'}
               className="text-xl font-bold"
             >
-              Reboisement
+              EcoTracker
             </Link>
           </div>
 

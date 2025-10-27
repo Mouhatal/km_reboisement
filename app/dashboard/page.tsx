@@ -5,8 +5,10 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DashboardStats } from '@/lib/types';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { MapPin, Calendar, DollarSign, TrendingUp, Package, AlertCircle } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { MapPin, Calendar, DollarSign, TrendingUp, Package, AlertCircle, Leaf, Activity, Plus, Wallet, TrendingDown, BarChart3 } from 'lucide-react';
+import { StatCard } from '@/components/ui/stat-card';
+import { QuickActionButton } from '@/components/ui/quick-action-button';
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
 
@@ -22,16 +24,17 @@ export default function Dashboard() {
     if (!loading && !user) {
       router.push('/');
     }
-    if (!loading && profile?.role !== 'administrateur') {
+    // Admin check is now handled by the navigation component, but keeping it here for direct access protection
+    if (!loading && user && profile?.role !== 'administrateur') {
       router.push('/ilots');
     }
   }, [user, profile, loading, router]);
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.role === 'administrateur') {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, profile]);
 
   const loadDashboardData = async () => {
     setLoadingData(true);
@@ -55,6 +58,9 @@ export default function Dashboard() {
 
       const totalDecaissements = decaissements.reduce((sum, d) => sum + (d.montant || 0), 0);
       const totalDepenses = depenses.reduce((sum, d) => sum + (d.montant || 0), 0);
+      const soldeRestant = totalDecaissements - totalDepenses;
+      const tauxUtilisation = totalDecaissements > 0 ? (totalDepenses / totalDecaissements) * 100 : 0;
+
 
       setStats({
         total_ilots: ilots.length,
@@ -63,7 +69,8 @@ export default function Dashboard() {
         total_activites: activites.length,
         total_decaissements: totalDecaissements,
         total_depenses: totalDepenses,
-        solde_restant: totalDecaissements - totalDepenses,
+        solde_restant: soldeRestant,
+        taux_utilisation_budgetaire: tauxUtilisation, // Add this to DashboardStats type
       });
 
       setRecentActivities(activites);
@@ -84,16 +91,16 @@ export default function Dashboard() {
     }
   };
 
-  if (loading || !user) {
-    return null;
+  if (loading || !user || profile?.role !== 'administrateur') {
+    return null; // Render nothing or a loading spinner while redirecting or unauthorized
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-4 lg:py-8">
-        <div className="mb-6 lg:mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tableau de bord</h1>
-          <p className="text-gray-600 mt-2 text-sm lg:text-base">Vue d&apos;ensemble du projet de reboisement</p>
+        <div className="bg-green-600 text-white p-6 rounded-lg shadow-md mb-6 lg:mb-8">
+          <h1 className="text-2xl lg:text-3xl font-bold">Tableau de Bord</h1>
+          <p className="text-green-100 mt-2 text-sm lg:text-base">Suivi du projet de reboisement communautaire.</p>
         </div>
 
         {loadingData ? (
@@ -104,52 +111,108 @@ export default function Dashboard() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
               <StatCard
-                icon={MapPin}
-                title="Total Îlots"
+                title="Îlots totaux"
                 value={stats?.total_ilots || 0}
-                color="green"
+                icon={Leaf}
+                bgColor="bg-green-100"
+                textColor="text-green-800"
+                iconColor="text-green-600"
               />
               <StatCard
-                icon={TrendingUp}
-                title="Plants Total"
-                value={(stats?.total_plants || 0).toLocaleString()}
-                color="blue"
-              />
-              <StatCard
-                icon={TrendingUp}
-                title="Taux de Survie Moyen"
+                title="Taux de survie moyen"
                 value={`${(stats?.taux_survie_moyen || 0).toFixed(1)}%`}
-                color="green"
+                icon={BarChart3}
+                bgColor="bg-blue-100"
+                textColor="text-blue-800"
+                iconColor="text-blue-600"
               />
               <StatCard
-                icon={Calendar}
                 title="Activités"
                 value={stats?.total_activites || 0}
-                color="orange"
+                icon={Activity}
+                bgColor="bg-purple-100"
+                textColor="text-purple-800"
+                iconColor="text-purple-600"
               />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
-              <FinanceCard
-                title="Décaissements"
-                amount={stats?.total_decaissements || 0}
-                color="blue"
-              />
-              <FinanceCard
-                title="Dépenses"
-                amount={stats?.total_depenses || 0}
-                color="red"
-              />
-              <FinanceCard
-                title="Solde Restant"
-                amount={stats?.solde_restant || 0}
-                color="green"
+              <StatCard
+                title="Solde"
+                value={`${(stats?.solde_restant || 0).toLocaleString()} FCFA`}
+                icon={DollarSign}
+                bgColor="bg-yellow-100"
+                textColor="text-yellow-800"
+                iconColor="text-yellow-600"
               />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
               <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-semibold mb-4">Répartition des Îlots par Type de Sol</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">Résumé Financier</h2>
+                <div className="space-y-3 text-gray-700">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span>Encaissements totaux</span>
+                    <span className="font-medium text-green-600">
+                      +{(stats?.total_decaissements || 0).toLocaleString()} FCFA
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span>Dépenses totales</span>
+                    <span className="font-medium text-red-600">
+                      -{(stats?.total_depenses || 0).toLocaleString()} FCFA
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="font-semibold">Solde disponible</span>
+                    <span className={`font-bold ${stats && stats.solde_restant >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {(stats?.solde_restant || 0).toLocaleString()} FCFA
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span>Taux d&apos;utilisation budgétaire</span>
+                    <span className="font-medium">
+                      {(stats?.taux_utilisation_budgetaire || 0).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">Actions Rapides</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <QuickActionButton
+                    label="Nouvel Îlot"
+                    icon={Plus}
+                    onClick={() => router.push('/ilots?form=true')} // Will handle opening form in ilots page
+                    bgColor="bg-green-50"
+                    textColor="text-green-700"
+                  />
+                  <QuickActionButton
+                    label="Nouvelle activité"
+                    icon={Activity}
+                    onClick={() => router.push('/activites?form=true')} // Will handle opening form in activites page
+                    bgColor="bg-blue-50"
+                    textColor="text-blue-700"
+                  />
+                  <QuickActionButton
+                    label="Encaissement"
+                    icon={Wallet}
+                    onClick={() => router.push('/finances?tab=decaissements&form=true')} // Will handle opening form in finances page
+                    bgColor="bg-purple-50"
+                    textColor="text-purple-700"
+                  />
+                  <QuickActionButton
+                    label="Dépense"
+                    icon={TrendingDown}
+                    onClick={() => router.push('/finances?tab=depenses&form=true')} // Will handle opening form in finances page
+                    bgColor="bg-red-50"
+                    textColor="text-red-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">Répartition des Îlots par Type de Sol</h2>
                 {ilotsByType.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
@@ -176,7 +239,7 @@ export default function Dashboard() {
               </div>
 
               <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-xl font-semibold mb-4">Activités Récentes</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">Activités Récentes</h2>
                 {recentActivities.length > 0 ? (
                   <div className="space-y-3">
                     {recentActivities.map((activity) => (
@@ -197,48 +260,6 @@ export default function Dashboard() {
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, title, value, color }: any) {
-  const colors = {
-    green: 'bg-green-100 text-green-600',
-    blue: 'bg-blue-100 text-blue-600',
-    orange: 'bg-orange-100 text-orange-600',
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
-        </div>
-        <div className={`p-3 rounded-full ${colors[color as keyof typeof colors]}`}>
-          <Icon size={24} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FinanceCard({ title, amount, color }: any) {
-  const colors = {
-    blue: 'text-blue-600',
-    red: 'text-red-600',
-    green: 'text-green-600',
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <div className="flex items-center space-x-3 mb-2">
-        <DollarSign size={20} className={colors[color as keyof typeof colors]} />
-        <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
-      </div>
-      <p className={`text-2xl font-bold ${colors[color as keyof typeof colors]}`}>
-        {amount.toLocaleString()} FCFA
-      </p>
     </div>
   );
 }

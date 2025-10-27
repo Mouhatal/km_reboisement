@@ -100,4 +100,5 @@ export interface DashboardStats {
   total_decaissements: number;
   total_depenses: number;
   solde_restant: number;
+  taux_utilisation_budgetaire: number; // Added this field
 }
