@@ -5,8 +5,9 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Activite, Ilot } from '@/lib/types';
-import { Plus, Search, Download, Edit, Trash2, X, Upload, Users } from 'lucide-react';
+import { Plus, Search, Download, Edit, Trash2, X, Upload, Users, Calendar, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
 
 export default function ActivitesPage() {
   const { user, profile, loading } = useAuth();
@@ -82,6 +83,10 @@ export default function ActivitesPage() {
     link.click();
   };
 
+  const totalActivites = activites.length;
+  const totalParticipants = activites.reduce((sum, act) => sum + act.nombre_participants, 0);
+  const totalMontantDecaisse = activites.reduce((sum, act) => sum + act.montant_decaisse, 0);
+
   if (loading || !user) {
     return null;
   }
@@ -106,104 +111,137 @@ export default function ActivitesPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-4 border-b flex items-center justify-between">
-            <div className="flex items-center space-x-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Rechercher une activité..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
+        {loadingData ? (
+          <div className="text-center py-12">
+            <div className="text-lg text-gray-600">Chargement des données...</div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+              <StatCard
+                title="Total Activités"
+                value={totalActivites}
+                icon={Calendar}
+                bgColor="bg-blue-100"
+                textColor="text-blue-800"
+                iconColor="text-blue-600"
+              />
+              <StatCard
+                title="Total Participants"
+                value={totalParticipants.toLocaleString()}
+                icon={Users}
+                bgColor="bg-green-100"
+                textColor="text-green-800"
+                iconColor="text-green-600"
+              />
+              <StatCard
+                title="Budget Décaissé"
+                value={`${totalMontantDecaisse.toLocaleString()} FCFA`}
+                icon={DollarSign}
+                bgColor="bg-purple-100"
+                textColor="text-purple-800"
+                iconColor="text-purple-600"
+              />
             </div>
 
-            <button
-              onClick={exportToCSV}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              <Download size={20} />
-              <span>Export CSV</span>
-            </button>
-          </div>
-
-          <div className="p-4">
-            {loadingData ? (
-              <div className="text-center py-12">Chargement...</div>
-            ) : filteredActivites.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">Aucune activité trouvée</div>
-            ) : (
-              <div className="grid gap-4">
-                {filteredActivites.map((activite) => (
-                  <div key={activite.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{activite.type_activite}</h3>
-                          <span className="text-sm text-gray-500">
-                            {format(new Date(activite.date), 'dd/MM/yyyy')}
-                          </span>
-                        </div>
-
-                        <p className="text-gray-700 mb-3">{activite.objectif}</p>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          {activite.public_cible && (
-                            <div>
-                              <span className="text-gray-600">Public:</span>
-                              <p className="font-medium">{activite.public_cible}</p>
-                            </div>
-                          )}
-                          <div>
-                            <span className="text-gray-600">Participants:</span>
-                            <p className="font-medium flex items-center space-x-1">
-                              <Users size={16} />
-                              <span>{activite.nombre_participants}</span>
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Montant:</span>
-                            <p className="font-medium text-green-600">{activite.montant_decaisse.toLocaleString()} FCFA</p>
-                          </div>
-                        </div>
-
-                        {activite.commentaires && (
-                          <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
-                            <span className="text-gray-600">Commentaires: </span>
-                            <span className="text-gray-800">{activite.commentaires}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center space-x-2 ml-4">
-                        <button
-                          onClick={() => {
-                            setEditingActivite(activite);
-                            setShowForm(true);
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                        >
-                          <Edit size={20} />
-                        </button>
-                        {profile?.role === 'administrateur' && (
-                          <button
-                            onClick={() => handleDelete(activite.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 size={20} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+            <div className="bg-white rounded-lg shadow mb-6">
+              <div className="p-4 border-b flex items-center justify-between">
+                <div className="flex items-center space-x-4 flex-1">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder="Rechercher une activité..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
                   </div>
-                ))}
+                </div>
+
+                <button
+                  onClick={exportToCSV}
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  <Download size={20} />
+                  <span>Export CSV</span>
+                </button>
               </div>
-            )}
-          </div>
-        </div>
+
+              <div className="p-4">
+                {filteredActivites.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">Aucune activité trouvée</div>
+                ) : (
+                  <div className="grid gap-4">
+                    {filteredActivites.map((activite) => (
+                      <div key={activite.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h3 className="text-lg font-semibold text-gray-900">{activite.type_activite}</h3>
+                              <span className="text-sm text-gray-500">
+                                {format(new Date(activite.date), 'dd/MM/yyyy')}
+                              </span>
+                            </div>
+
+                            <p className="text-gray-700 mb-3">{activite.objectif}</p>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              {activite.public_cible && (
+                                <div>
+                                  <span className="text-gray-600">Public:</span>
+                                  <p className="font-medium">{activite.public_cible}</p>
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-gray-600">Participants:</span>
+                                <p className="font-medium flex items-center space-x-1">
+                                  <Users size={16} />
+                                  <span>{activite.nombre_participants}</span>
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Montant:</span>
+                                <p className="font-medium text-green-600">{activite.montant_decaisse.toLocaleString()} FCFA</p>
+                              </div>
+                            </div>
+
+                            {activite.commentaires && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
+                                <span className="text-gray-600">Commentaires: </span>
+                                <span className="text-gray-800">{activite.commentaires}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center space-x-2 ml-4">
+                            <button
+                              onClick={() => {
+                                setEditingActivite(activite);
+                                setShowForm(true);
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                            >
+                              <Edit size={20} />
+                            </button>
+                            {profile?.role === 'administrateur' && (
+                              <button
+                                onClick={() => handleDelete(activite.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {showForm && (
