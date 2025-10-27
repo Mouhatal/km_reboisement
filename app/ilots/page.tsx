@@ -102,8 +102,8 @@ export default function IlotsPage() {
   };
 
   const totalSuperficie = ilots.reduce((sum, ilot) => sum + ilot.superficie_ha, 0);
-  const totalPlants = ilots.reduce((sum, ilot) => sum + ilot.nombre_de_plants, 0);
-  const tauxSurvieMoyen = ilots.length > 0 ? ilots.reduce((sum, ilot) => sum + ilot.taux_de_survie, 0) / ilots.length : 0;
+  const totalPlants = ilots.reduce((sum, ilot) => sum + (ilot.nombre_de_plants || 0), 0); // Added || 0
+  const tauxSurvieMoyen = ilots.length > 0 ? ilots.reduce((sum, ilot) => sum + (ilot.taux_de_survie || 0), 0) / ilots.length : 0; // Added || 0
 
   if (loading || !user) {
     return null;
@@ -255,19 +255,19 @@ export default function IlotsPage() {
                             <span className="font-medium">Type de sol:</span> {ilot.type_de_sol}
                           </p>
                           <p className="text-gray-700">
-                            <span className="font-medium">Plants plantés:</span> {ilot.nombre_de_plants.toLocaleString()}
+                            <span className="font-medium">Plants plantés:</span> {(ilot.nombre_de_plants || 0).toLocaleString()}
                           </p>
                           <p className="text-gray-700">
-                            <span className="font-medium">Plants survivants:</span> {ilot.nombre_de_plants_survivants.toLocaleString()}
+                            <span className="font-medium">Plants survivants:</span> {(ilot.nombre_de_plants_survivants || 0).toLocaleString()}
                           </p>
                           <p className="text-gray-700 flex items-center space-x-1">
                             <span className="font-medium">Taux de survie:</span>
                             <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                              ilot.taux_de_survie >= 70 ? 'bg-green-100 text-green-800' :
-                              ilot.taux_de_survie >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                              (ilot.taux_de_survie || 0) >= 70 ? 'bg-green-100 text-green-800' :
+                              (ilot.taux_de_survie || 0) >= 40 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              {ilot.taux_de_survie.toFixed(1)}%
+                              {(ilot.taux_de_survie || 0).toFixed(1)}%
                             </span>
                           </p>
                           <p className="text-gray-700">
