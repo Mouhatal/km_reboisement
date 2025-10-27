@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Ilot } from '@/lib/types';
 import dynamic from 'next/dynamic';
-import { Plus, Search, Download, Eye, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Search, Download, Edit, Trash2, X, Leaf, AreaChart, BarChart3, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
 
 const MapComponent = dynamic(() => import('@/components/map-component').then(mod => ({ default: mod.MapComponent })), {
   ssr: false,
@@ -18,6 +18,7 @@ const MapComponent = dynamic(() => import('@/components/map-component').then(mod
 export default function IlotsPage() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [ilots, setIlots] = useState<Ilot[]>([]);
   const [filteredIlots, setFilteredIlots] = useState<Ilot[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,10 +40,18 @@ export default function IlotsPage() {
   }, [user]);
 
   useEffect(() => {
+    const formParam = searchParams.get('form');
+    if (formParam === 'true') {
+      setShowForm(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const filtered = ilots.filter(
       (ilot) =>
         ilot.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ilot.type_de_sol.toLowerCase().includes(searchTerm.toLowerCase())
+        ilot.type_de_sol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ilot.observations?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredIlots(filtered);
   }, [searchTerm, ilots]);
@@ -71,14 +80,15 @@ export default function IlotsPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Nom', 'Superficie (ha)', 'Type de sol', 'Nombre de plants', 'Taux de survie (%)', 'Date de suivi'];
+    const headers = ['Nom', 'Superficie (ha)', 'Type de sol', 'Nombre de plants', 'Taux de survie (%)', 'Date de suivi', 'Observations'];
     const rows = filteredIlots.map(i => [
       i.nom,
       i.superficie_ha,
       i.type_de_sol,
       i.nombre_de_plants,
       i.taux_de_survie,
-      i.date_de_suivi
+      i.date_de_suivi,
+      i.observations || ''
     ]);
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -90,155 +100,193 @@ export default function IlotsPage() {
     a.click();
   };
 
+  const totalSuperficie = ilots.reduce((sum, ilot) => sum + ilot.superficie_ha, 0);
+  const totalPlants = ilots.reduce((sum, ilot) => sum + ilot.nombre_de_plants, 0);
+  const tauxSurvieMoyen = ilots.length > 0 ? ilots.reduce((sum, ilot) => sum + ilot.taux_de_survie, 0) / ilots.length : 0;
+
   if (loading || !user) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 lg:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 lg:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion des Îlots</h1>
-            <p className="text-gray-600 mt-2">Suivi des zones de reboisement</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Gestion des Îlots</h1>
+            <p className="text-gray-600 mt-2 text-sm lg:text-base">Suivi des zones de reboisement</p>
           </div>
           <button
             onClick={() => {
               setEditingIlot(null);
               setShowForm(true);
             }}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
           >
             <Plus size={20} />
             <span>Nouvel Îlot</span>
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-4 border-b flex items-center justify-between">
-            <div className="flex items-center space-x-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Rechercher un îlot..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-lg ${viewMode === 'list' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                Liste
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`px-4 py-2 rounded-lg ${viewMode === 'map' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                Carte
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                <Download size={20} />
-                <span>Export CSV</span>
-              </button>
-            </div>
+        {loadingData ? (
+          <div className="text-center py-12">
+            <div className="text-lg text-gray-600">Chargement des données...</div>
           </div>
-
-          <div className="p-4">
-            {loadingData ? (
-              <div className="text-center py-12">Chargement...</div>
-            ) : viewMode === 'map' ? (
-              <MapComponent
-                markers={filteredIlots.map(i => ({
-                  id: i.id,
-                  nom: i.nom,
-                  latitude: i.latitude,
-                  longitude: i.longitude,
-                  nombre_de_plants: i.nombre_de_plants,
-                  taux_de_survie: i.taux_de_survie,
-                }))}
-                onMarkerClick={(id) => {
-                  const ilot = ilots.find(i => i.id === id);
-                  if (ilot) {
-                    setEditingIlot(ilot);
-                    setShowForm(true);
-                  }
-                }}
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+              <StatCard
+                title="Superficie Totale"
+                value={`${totalSuperficie.toFixed(2)} ha`}
+                icon={AreaChart}
+                bgColor="bg-blue-100"
+                textColor="text-blue-800"
+                iconColor="text-blue-600"
               />
-            ) : filteredIlots.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">Aucun îlot trouvé</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Superficie</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type de Sol</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Plants</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Taux Survie</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date Suivi</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
+              <StatCard
+                title="Plants Totaux"
+                value={totalPlants.toLocaleString()}
+                icon={Leaf}
+                bgColor="bg-green-100"
+                textColor="text-green-800"
+                iconColor="text-green-600"
+              />
+              <StatCard
+                title="Taux de Survie Moyen"
+                value={`${tauxSurvieMoyen.toFixed(1)}%`}
+                icon={BarChart3}
+                bgColor="bg-purple-100"
+                textColor="text-purple-800"
+                iconColor="text-purple-600"
+              />
+            </div>
+
+            <div className="bg-white rounded-lg shadow mb-6">
+              <div className="p-4 border-b flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+                <div className="flex items-center space-x-4 flex-1 w-full">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder="Rechercher un îlot..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-4 py-2 rounded-lg ${viewMode === 'list' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    Liste
+                  </button>
+                  <button
+                    onClick={() => setViewMode('map')}
+                    className={`px-4 py-2 rounded-lg ${viewMode === 'map' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    Carte
+                  </button>
+                  <button
+                    onClick={exportToCSV}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    <Download size={20} />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4">
+                {viewMode === 'map' ? (
+                  <MapComponent
+                    markers={filteredIlots.map(i => ({
+                      id: i.id,
+                      nom: i.nom,
+                      latitude: i.latitude,
+                      longitude: i.longitude,
+                      nombre_de_plants: i.nombre_de_plants,
+                      taux_de_survie: i.taux_de_survie,
+                    }))}
+                    onMarkerClick={(id) => {
+                      const ilot = ilots.find(i => i.id === id);
+                      if (ilot) {
+                        setEditingIlot(ilot);
+                        setShowForm(true);
+                      }
+                    }}
+                  />
+                ) : filteredIlots.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">Aucun îlot trouvé</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredIlots.map((ilot) => (
-                      <tr key={ilot.id} className="hover:bg-gray-50">
-                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm font-medium text-gray-900">{ilot.nom}</td>
-                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">{ilot.superficie_ha} ha</td>
-                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">{ilot.type_de_sol}</td>
-                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">{ilot.nombre_de_plants.toLocaleString()}</td>
-                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                            ilot.taux_de_survie >= 70 ? 'bg-green-100 text-green-800' :
-                            ilot.taux_de_survie >= 40 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {ilot.taux_de_survie}%
-                          </span>
-                        </td>
-                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-gray-600">
-                          {format(new Date(ilot.date_de_suivi), 'dd/MM/yyyy')}
-                        </td>
-                        <td className="px-2 lg:px-4 py-3 text-xs lg:text-sm text-right">
-                          <div className="flex items-center justify-end space-x-1 lg:space-x-2">
+                      <div key={ilot.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow flex flex-col">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">{ilot.nom}</h3>
+                          <div className="flex items-center space-x-2">
                             <button
                               onClick={() => {
                                 setEditingIlot(ilot);
                                 setShowForm(true);
                               }}
-                              className="p-1 lg:p-2 text-blue-600 hover:bg-blue-50 rounded"
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                             >
-                              <Edit size={14} className="lg:hidden" />
-                              <Edit size={16} className="hidden lg:block" />
+                              <Edit size={18} />
                             </button>
                             {profile?.role === 'administrateur' && (
                               <button
                                 onClick={() => handleDelete(ilot.id)}
-                                className="p-1 lg:p-2 text-red-600 hover:bg-red-50 rounded"
+                                className="p-2 text-red-600 hover:bg-red-50 rounded"
                               >
-                                <Trash2 size={14} className="lg:hidden" />
-                                <Trash2 size={16} className="hidden lg:block" />
+                                <Trash2 size={18} />
                               </button>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="space-y-2 text-sm flex-1">
+                          <p className="text-gray-700">
+                            <span className="font-medium">Superficie:</span> {ilot.superficie_ha} ha
+                          </p>
+                          <p className="text-gray-700">
+                            <span className="font-medium">Type de sol:</span> {ilot.type_de_sol}
+                          </p>
+                          <p className="text-gray-700">
+                            <span className="font-medium">Plants:</span> {ilot.nombre_de_plants.toLocaleString()}
+                          </p>
+                          <p className="text-gray-700 flex items-center space-x-1">
+                            <span className="font-medium">Taux de survie:</span>
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                              ilot.taux_de_survie >= 70 ? 'bg-green-100 text-green-800' :
+                              ilot.taux_de_survie >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {ilot.taux_de_survie}%
+                            </span>
+                          </p>
+                          <p className="text-gray-700">
+                            <span className="font-medium">Dernier suivi:</span> {format(new Date(ilot.date_de_suivi), 'dd/MM/yyyy')}
+                          </p>
+                          {ilot.observations && (
+                            <p className="text-gray-700">
+                              <span className="font-medium">Observations:</span> {ilot.observations}
+                            </p>
+                          )}
+                          <p className="text-gray-700 flex items-center space-x-1">
+                            <MapPin size={16} className="text-gray-500" />
+                            <span>{ilot.latitude}, {ilot.longitude}</span>
+                          </p>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
       {showForm && (
@@ -247,11 +295,13 @@ export default function IlotsPage() {
           onClose={() => {
             setShowForm(false);
             setEditingIlot(null);
+            router.replace('/ilots', undefined); // Remove form=true from URL
           }}
           onSave={() => {
             setShowForm(false);
             setEditingIlot(null);
             loadIlots();
+            router.replace('/ilots', undefined); // Remove form=true from URL
           }}
         />
       )}
@@ -303,7 +353,7 @@ function IlotForm({ ilot, onClose, onSave }: { ilot: Ilot | null; onClose: () =>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Nom de l&apos;îlot</label>
               <input
