@@ -5,9 +5,10 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Activite, Ilot } from '@/lib/types';
-import { Plus, Search, Download, Edit, Trash2, X, Upload, Users, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Search, Download, Edit, Trash2, X, Upload, Users, Calendar, DollarSign, FileText, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
+import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage'; // Import storage utilities
 
 export default function ActivitesPage() {
   const { user, profile, loading } = useAuth();
@@ -206,6 +207,38 @@ export default function ActivitesPage() {
                               </div>
                             </div>
 
+                            {(activite.factures && activite.factures.length > 0) || (activite.liste_presence && activite.liste_presence.length > 0) ? (
+                              <div className="mt-4 pt-3 border-t border-gray-100">
+                                <p className="text-sm font-medium text-gray-700 mb-2">Pièces jointes:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {activite.factures?.map((url, index) => (
+                                    <a
+                                      key={`facture-${index}`}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center space-x-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-100"
+                                    >
+                                      <FileText size={14} />
+                                      <span>Facture {index + 1}</span>
+                                    </a>
+                                  ))}
+                                  {activite.liste_presence?.map((url, index) => (
+                                    <a
+                                      key={`presence-${index}`}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center space-x-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium hover:bg-purple-100"
+                                    >
+                                      <ListChecks size={14} />
+                                      <span>Présence {index + 1}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+
                             {activite.commentaires && (
                               <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
                                 <span className="text-gray-600">Commentaires: </span>
@@ -274,7 +307,12 @@ function ActiviteForm({ activite, onClose, onSave }: { activite: Activite | null
     montant_decaisse: activite?.montant_decaisse || 0,
     nombre_participants: activite?.nombre_participants || 0,
     commentaires: activite?.commentaires || '',
+    photos: activite?.photos || [], // Existing photos URLs
+    factures: activite?.factures || [], // Existing factures URLs
+    liste_presence: activite?.liste_presence || [], // Existing liste_presence URLs
   });
+  const [newFactures, setNewFactures] = useState<File[]>([]);
+  const [newListePresence, setNewListePresence] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -303,19 +341,63 @@ function ActiviteForm({ activite, onClose, onSave }: { activite: Activite | null
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<File[]>>) => {
+    if (e.target.files) {
+      setter(prev => [...prev, ...Array.from(e.target.files || [])]);
+    }
+  };
+
+  const removeExistingFile = (fileUrl: string, field: 'factures' | 'liste_presence') => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].filter(url => url !== fileUrl)
+    }));
+  };
+
+  const removeNewFile = (index: number, field: 'newFactures' | 'newListePresence') => {
+    if (field === 'newFactures') {
+      setNewFactures(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setNewListePresence(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
       let activiteId = activite?.id;
+      let uploadedFactureUrls: string[] = [...formData.factures];
+      let uploadedListePresenceUrls: string[] = [...formData.liste_presence];
+
+      // Upload new factures
+      for (const file of newFactures) {
+        const filePath = generateUniqueFilePath('activite_factures', file.name);
+        const url = await uploadFileToSupabase(file, 'activite-documents', filePath);
+        if (url) uploadedFactureUrls.push(url);
+      }
+
+      // Upload new liste de presence
+      for (const file of newListePresence) {
+        const filePath = generateUniqueFilePath('activite_liste_presence', file.name);
+        const url = await uploadFileToSupabase(file, 'activite-documents', filePath);
+        if (url) uploadedListePresenceUrls.push(url);
+      }
+
+      const activityData = {
+        ...formData,
+        factures: uploadedFactureUrls,
+        liste_presence: uploadedListePresenceUrls,
+        created_by: user?.id, // Only set on creation
+      };
 
       if (activite) {
-        await supabase.from('activites').update(formData).eq('id', activite.id);
+        await supabase.from('activites').update(activityData).eq('id', activite.id);
       } else {
         const { data } = await supabase
           .from('activites')
-          .insert([{ ...formData, created_by: user?.id }])
+          .insert([activityData])
           .select()
           .single();
         activiteId = data?.id;
@@ -452,6 +534,76 @@ function ActiviteForm({ activite, onClose, onSave }: { activite: Activite | null
                   />
                   <span className="text-sm">{ilot.nom}</span>
                 </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Factures Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Factures</label>
+            <input
+              type="file"
+              multiple
+              onChange={(e) => handleFileChange(e, setNewFactures)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+            />
+            <div className="mt-2 space-y-1">
+              {formData.factures.map((url, index) => (
+                <div key={`existing-facture-${index}`} className="flex items-center justify-between bg-gray-50 p-2 rounded-md text-sm">
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center space-x-1">
+                    <FileText size={16} />
+                    <span>Facture existante {index + 1}</span>
+                  </a>
+                  <button type="button" onClick={() => removeExistingFile(url, 'factures')} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50">
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+              {newFactures.map((file, index) => (
+                <div key={`new-facture-${index}`} className="flex items-center justify-between bg-green-50 p-2 rounded-md text-sm">
+                  <span className="text-green-700 flex items-center space-x-1">
+                    <Upload size={16} />
+                    <span>{file.name}</span>
+                  </span>
+                  <button type="button" onClick={() => removeNewFile(index, 'newFactures')} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50">
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Liste de Présence Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Listes de présence</label>
+            <input
+              type="file"
+              multiple
+              onChange={(e) => handleFileChange(e, setNewListePresence)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+            />
+            <div className="mt-2 space-y-1">
+              {formData.liste_presence.map((url, index) => (
+                <div key={`existing-presence-${index}`} className="flex items-center justify-between bg-gray-50 p-2 rounded-md text-sm">
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center space-x-1">
+                    <ListChecks size={16} />
+                    <span>Liste de présence existante {index + 1}</span>
+                  </a>
+                  <button type="button" onClick={() => removeExistingFile(url, 'liste_presence')} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50">
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+              {newListePresence.map((file, index) => (
+                <div key={`new-presence-${index}`} className="flex items-center justify-between bg-green-50 p-2 rounded-md text-sm">
+                  <span className="text-green-700 flex items-center space-x-1">
+                    <Upload size={16} />
+                    <span>{file.name}</span>
+                  </span>
+                  <button type="button" onClick={() => removeNewFile(index, 'newListePresence')} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50">
+                    <X size={16} />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
