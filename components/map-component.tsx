@@ -74,6 +74,7 @@ export function MapComponent({ markers, center }: MapProps) {
       center={calculatedCenter}
       zoom={markers.length > 0 ? 13 : 10} // Adjust initial zoom if markers are present
       style={{ height: '500px', width: '100%', borderRadius: '8px' }}
+      className="z-10" // Ajout de z-index pour s'assurer que les popups s'affichent au-dessus
     >
       <MapUpdater center={calculatedCenter} markers={markers} />
       <TileLayer
