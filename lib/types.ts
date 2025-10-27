@@ -17,7 +17,8 @@ export interface Ilot {
   latitude: number;
   longitude: number;
   nombre_de_plants: number;
-  taux_de_survie: number;
+  nombre_de_plants_survivants: number; // Nouveau champ
+  taux_de_survie: number; // Sera calculé
   photos: string[];
   date_de_suivi: string;
   observations: string | null;

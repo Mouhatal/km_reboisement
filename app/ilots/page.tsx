@@ -80,12 +80,13 @@ export default function IlotsPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Nom', 'Superficie (ha)', 'Type de sol', 'Nombre de plants', 'Taux de survie (%)', 'Date de suivi', 'Observations'];
+    const headers = ['Nom', 'Superficie (ha)', 'Type de sol', 'Nombre de plants', 'Plants survivants', 'Taux de survie (%)', 'Date de suivi', 'Observations'];
     const rows = filteredIlots.map(i => [
       i.nom,
       i.superficie_ha,
       i.type_de_sol,
       i.nombre_de_plants,
+      i.nombre_de_plants_survivants,
       i.taux_de_survie,
       i.date_de_suivi,
       i.observations || ''
@@ -254,7 +255,10 @@ export default function IlotsPage() {
                             <span className="font-medium">Type de sol:</span> {ilot.type_de_sol}
                           </p>
                           <p className="text-gray-700">
-                            <span className="font-medium">Plants:</span> {ilot.nombre_de_plants.toLocaleString()}
+                            <span className="font-medium">Plants plantés:</span> {ilot.nombre_de_plants.toLocaleString()}
+                          </p>
+                          <p className="text-gray-700">
+                            <span className="font-medium">Plants survivants:</span> {ilot.nombre_de_plants_survivants.toLocaleString()}
                           </p>
                           <p className="text-gray-700 flex items-center space-x-1">
                             <span className="font-medium">Taux de survie:</span>
@@ -263,7 +267,7 @@ export default function IlotsPage() {
                               ilot.taux_de_survie >= 40 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
-                              {ilot.taux_de_survie}%
+                              {ilot.taux_de_survie.toFixed(1)}%
                             </span>
                           </p>
                           <p className="text-gray-700">
@@ -318,21 +322,38 @@ function IlotForm({ ilot, onClose, onSave }: { ilot: Ilot | null; onClose: () =>
     latitude: ilot?.latitude || 0,
     longitude: ilot?.longitude || 0,
     nombre_de_plants: ilot?.nombre_de_plants || 0,
-    taux_de_survie: ilot?.taux_de_survie || 0,
+    nombre_de_plants_survivants: ilot?.nombre_de_plants_survivants || 0, // Nouveau champ
+    taux_de_survie: ilot?.taux_de_survie || 0, // Sera calculé
     date_de_suivi: ilot?.date_de_suivi || new Date().toISOString().split('T')[0],
     observations: ilot?.observations || '',
   });
   const [saving, setSaving] = useState(false);
+
+  // Effect to calculate taux_de_survie whenever relevant fields change
+  useEffect(() => {
+    const { nombre_de_plants, nombre_de_plants_survivants } = formData;
+    let calculatedTaux = 0;
+    if (nombre_de_plants > 0) {
+      calculatedTaux = (nombre_de_plants_survivants / nombre_de_plants) * 100;
+    }
+    setFormData(prev => ({ ...prev, taux_de_survie: parseFloat(calculatedTaux.toFixed(1)) }));
+  }, [formData.nombre_de_plants, formData.nombre_de_plants_survivants]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
+      const dataToSave = {
+        ...formData,
+        // taux_de_survie est déjà mis à jour par l'effet, donc on peut l'envoyer directement
+      };
+
       if (ilot) {
-        await supabase.from('ilots').update(formData).eq('id', ilot.id);
+        await supabase.from('ilots').update(dataToSave).eq('id', ilot.id);
       } else {
-        await supabase.from('ilots').insert([{ ...formData, created_by: user?.id }]);
+        await supabase.from('ilots').insert([{ ...dataToSave, created_by: user?.id }]);
       }
       onSave();
     } catch (error) {
@@ -389,13 +410,36 @@ function IlotForm({ ilot, onClose, onSave }: { ilot: Ilot | null; onClose: () =>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de plants</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de plants plantés</label>
               <input
                 type="number"
                 required
+                min="0"
                 value={formData.nombre_de_plants}
                 onChange={(e) => setFormData({ ...formData, nombre_de_plants: parseInt(e.target.value) })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de plants survivants</label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={formData.nombre_de_plants_survivants}
+                onChange={(e) => setFormData({ ...formData, nombre_de_plants_survivants: parseInt(e.target.value) })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Taux de survie (%)</label>
+              <input
+                type="text" // Changed to text as it's read-only
+                readOnly
+                value={formData.taux_de_survie.toFixed(1)} // Display calculated value
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
               />
             </div>
 
@@ -419,20 +463,6 @@ function IlotForm({ ilot, onClose, onSave }: { ilot: Ilot | null; onClose: () =>
                 required
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Taux de survie (%)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-                required
-                value={formData.taux_de_survie}
-                onChange={(e) => setFormData({ ...formData, taux_de_survie: parseFloat(e.target.value) })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
