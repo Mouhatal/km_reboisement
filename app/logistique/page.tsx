@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Materiel, Ilot, Activite } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, AlertTriangle, Package } from 'lucide-react';
 import { format } from 'date-fns';
+import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
 
 export default function LogistiquePage() {
   const { user, profile, loading } = useAuth();
@@ -35,7 +36,8 @@ export default function LogistiquePage() {
     let filtered = materiels.filter(
       (mat) =>
         mat.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (mat.emplacement && mat.emplacement.toLowerCase().includes(searchTerm.toLowerCase()))
+        (mat.emplacement && mat.emplacement.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (mat.notes && mat.notes.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     if (filterEtat !== 'all') {
@@ -69,14 +71,15 @@ export default function LogistiquePage() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Type', 'Quantité', 'État', 'Emplacement', 'Date acquisition', 'Alerte maintenance'];
+    const headers = ['Type', 'Quantité', 'État', 'Emplacement', 'Date acquisition', 'Alerte maintenance', 'Notes'];
     const rows = filteredMateriels.map(m => [
       m.type,
       m.quantite,
       m.etat,
       m.emplacement || '',
       m.date_acquisition,
-      m.alerte_maintenance ? 'Oui' : 'Non'
+      m.alerte_maintenance ? 'Oui' : 'Non',
+      m.notes || ''
     ]);
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -90,6 +93,7 @@ export default function LogistiquePage() {
 
   const getStatsByEtat = () => {
     return {
+      total: materiels.length,
       disponible: materiels.filter(m => m.etat === 'disponible').length,
       utilise: materiels.filter(m => m.etat === 'utilise').length,
       en_panne: materiels.filter(m => m.etat === 'en_panne').length,
@@ -106,108 +110,133 @@ export default function LogistiquePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 lg:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 lg:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion Logistique</h1>
-            <p className="text-gray-600 mt-2">Suivi du matériel et équipements</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Gestion Logistique</h1>
+            <p className="text-gray-600 mt-2 text-sm lg:text-base">Suivi du matériel et équipements</p>
           </div>
           <button
             onClick={() => {
               setEditingMateriel(null);
               setShowForm(true);
             }}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
           >
             <Plus size={20} />
             <span>Nouveau Matériel</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <StatCard label="Disponible" value={stats.disponible} color="green" />
-          <StatCard label="Utilisé" value={stats.utilise} color="blue" />
-          <StatCard label="En panne" value={stats.en_panne} color="red" />
-          <StatCard label="Remplacé" value={stats.remplace} color="gray" />
-          <StatCard label="Alertes" value={stats.alertes} color="orange" icon={AlertTriangle} />
-        </div>
-
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-4 border-b flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-4 flex-1 w-full">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Rechercher du matériel..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-
-              <select
-                value={filterEtat}
-                onChange={(e) => setFilterEtat(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="all">Tous les états</option>
-                <option value="disponible">Disponible</option>
-                <option value="utilise">Utilisé</option>
-                <option value="en_panne">En panne</option>
-                <option value="remplace">Remplacé</option>
-              </select>
+        {loadingData ? (
+          <div className="text-center py-12">
+            <div className="text-lg text-gray-600">Chargement des données...</div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-6 mb-6 lg:mb-8">
+              <StatCard
+                title="Total Matériel"
+                value={stats.total}
+                icon={Package}
+                bgColor="bg-blue-100"
+                textColor="text-blue-800"
+                iconColor="text-blue-600"
+              />
+              <StatCard
+                title="Disponible"
+                value={stats.disponible}
+                icon={Package}
+                bgColor="bg-green-100"
+                textColor="text-green-800"
+                iconColor="text-green-600"
+              />
+              <StatCard
+                title="Utilisé"
+                value={stats.utilise}
+                icon={Package}
+                bgColor="bg-purple-100"
+                textColor="text-purple-800"
+                iconColor="text-purple-600"
+              />
+              <StatCard
+                title="En panne"
+                value={stats.en_panne}
+                icon={Package}
+                bgColor="bg-red-100"
+                textColor="text-red-800"
+                iconColor="text-red-600"
+              />
+              <StatCard
+                title="Alertes"
+                value={stats.alertes}
+                icon={AlertTriangle}
+                bgColor="bg-orange-100"
+                textColor="text-orange-800"
+                iconColor="text-orange-600"
+              />
             </div>
 
-            <button
-              onClick={exportToCSV}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              <Download size={20} />
-              <span>Export CSV</span>
-            </button>
-          </div>
+            <div className="bg-white rounded-lg shadow mb-6">
+              <div className="p-4 border-b flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+                <div className="flex items-center space-x-4 flex-1 w-full">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder="Rechercher du matériel..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
 
-          <div className="p-4">
-            {loadingData ? (
-              <div className="text-center py-12">Chargement...</div>
-            ) : filteredMateriels.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">Aucun matériel trouvé</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quantité</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">État</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Emplacement</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date acquisition</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Alertes</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
+                <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                  <button
+                    onClick={() => setFilterEtat('all')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${filterEtat === 'all' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    Tous
+                  </button>
+                  <button
+                    onClick={() => setFilterEtat('disponible')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${filterEtat === 'disponible' ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    Disponible
+                  </button>
+                  <button
+                    onClick={() => setFilterEtat('utilise')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${filterEtat === 'utilise' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    Utilisé
+                  </button>
+                  <button
+                    onClick={() => setFilterEtat('en_panne')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${filterEtat === 'en_panne' ? 'bg-red-100 text-red-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    En panne
+                  </button>
+                  <button
+                    onClick={exportToCSV}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    <Download size={20} />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4">
+                {filteredMateriels.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">Aucun matériel trouvé</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredMateriels.map((materiel) => (
-                      <tr key={materiel.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{materiel.type}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{materiel.quantite}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${getEtatColor(materiel.etat)}`}>
-                            {getEtatLabel(materiel.etat)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{materiel.emplacement || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {format(new Date(materiel.date_acquisition), 'dd/MM/yyyy')}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {materiel.alerte_maintenance && (
-                            <AlertTriangle size={20} className="text-orange-500 inline" />
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          <div className="flex items-center justify-end space-x-2">
+                      <div key={materiel.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow flex flex-col">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">{materiel.type}</h3>
+                          <div className="flex items-center space-x-2">
                             <button
                               onClick={() => {
                                 setEditingMateriel(materiel);
@@ -215,26 +244,56 @@ export default function LogistiquePage() {
                               }}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                             >
-                              <Edit size={16} />
+                              <Edit size={18} />
                             </button>
                             {profile?.role === 'administrateur' && (
                               <button
                                 onClick={() => handleDelete(materiel.id)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={18} />
                               </button>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="space-y-2 text-sm flex-1">
+                          <p className="text-gray-700">
+                            <span className="font-medium">Quantité:</span> {materiel.quantite}
+                          </p>
+                          <p className="text-gray-700">
+                            <span className="font-medium">État:</span>
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ml-2 ${getEtatColor(materiel.etat)}`}>
+                              {getEtatLabel(materiel.etat)}
+                            </span>
+                          </p>
+                          {materiel.emplacement && (
+                            <p className="text-gray-700">
+                              <span className="font-medium">Emplacement:</span> {materiel.emplacement}
+                            </p>
+                          )}
+                          <p className="text-gray-700">
+                            <span className="font-medium">Acquisition:</span> {format(new Date(materiel.date_acquisition), 'dd/MM/yyyy')}
+                          </p>
+                          {materiel.alerte_maintenance && (
+                            <p className="text-orange-600 flex items-center space-x-1">
+                              <AlertTriangle size={16} />
+                              <span>Alerte maintenance</span>
+                            </p>
+                          )}
+                          {materiel.notes && (
+                            <p className="text-gray-700">
+                              <span className="font-medium">Notes:</span> {materiel.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
       {showForm && (
@@ -251,28 +310,6 @@ export default function LogistiquePage() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, color, icon: Icon }: any) {
-  const colors: any = {
-    green: 'bg-green-100 text-green-700 border-green-200',
-    blue: 'bg-blue-100 text-blue-700 border-blue-200',
-    red: 'bg-red-100 text-red-700 border-red-200',
-    gray: 'bg-gray-100 text-gray-700 border-gray-200',
-    orange: 'bg-orange-100 text-orange-700 border-orange-200',
-  };
-
-  return (
-    <div className={`p-4 rounded-lg border ${colors[color]}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium mb-1">{label}</p>
-          <p className="text-2xl font-bold">{value}</p>
-        </div>
-        {Icon && <Icon size={24} />}
-      </div>
     </div>
   );
 }
