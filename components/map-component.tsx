@@ -24,12 +24,17 @@ const icon = L.icon({
   iconAnchor: [12, 41],
 });
 
-function MapUpdater({ center }: { center: [number, number] }) {
+function MapUpdater({ center, markers }: { center: [number, number], markers: any[] }) {
   const map = useMap();
 
   useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
+    if (markers.length > 0) {
+      const bounds = L.latLngBounds(markers.map(m => [m.latitude, m.longitude]));
+      map.fitBounds(bounds, { padding: [50, 50] }); // Add some padding
+    } else {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, markers, map]);
 
   return null;
 }
@@ -48,15 +53,26 @@ interface MapProps {
 }
 
 export function MapComponent({ markers, center, onMarkerClick }: MapProps) {
-  const defaultCenter: [number, number] = center || [14.6928, -17.4467];
+  const defaultCenter: [number, number] = [14.6928, -17.4467]; // Dakar as a fallback
+
+  // Calculate dynamic center if no specific center is provided and there are markers
+  const calculatedCenter: [number, number] = (() => {
+    if (center) return center;
+    if (markers.length > 0) {
+      const sumLat = markers.reduce((sum, m) => sum + m.latitude, 0);
+      const sumLng = markers.reduce((sum, m) => sum + m.longitude, 0);
+      return [sumLat / markers.length, sumLng / markers.length];
+    }
+    return defaultCenter;
+  })();
 
   return (
     <MapContainer
-      center={defaultCenter}
-      zoom={10}
+      center={calculatedCenter}
+      zoom={markers.length > 0 ? 13 : 10} // Adjust initial zoom if markers are present
       style={{ height: '500px', width: '100%', borderRadius: '8px' }}
     >
-      <MapUpdater center={center || defaultCenter} />
+      <MapUpdater center={calculatedCenter} markers={markers} />
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
