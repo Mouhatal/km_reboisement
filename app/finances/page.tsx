@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Decaissement, Depense, Activite } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, DollarSign, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
 
 export default function FinancesPage() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'decaissements' | 'depenses'>('decaissements');
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [depenses, setDepenses] = useState<Depense[]>([]);
@@ -32,6 +34,17 @@ export default function FinancesPage() {
       loadFinances();
     }
   }, [user]);
+
+  useEffect(() => {
+    const formParam = searchParams.get('form');
+    const tabParam = searchParams.get('tab');
+    if (formParam === 'true') {
+      if (tabParam === 'decaissements' || tabParam === 'depenses') {
+        setActiveTab(tabParam);
+      }
+      setShowForm(true);
+    }
+  }, [searchParams]);
 
   const loadFinances = async () => {
     setLoadingData(true);
@@ -96,37 +109,31 @@ export default function FinancesPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Total Décaissements</h3>
-              <TrendingDown className="text-blue-600" size={24} />
-            </div>
-            <p className="text-3xl font-bold text-blue-600">{totalDecaissements.toLocaleString()} FCFA</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Total Dépenses</h3>
-              <TrendingUp className="text-red-600" size={24} />
-            </div>
-            <p className="text-3xl font-bold text-red-600">{totalDepenses.toLocaleString()} FCFA</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Solde Restant</h3>
-              <DollarSign className={solde >= 0 ? 'text-green-600' : 'text-red-600'} size={24} />
-            </div>
-            <p className={`text-3xl font-bold ${solde >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {solde.toLocaleString()} FCFA
-            </p>
-            {solde < 0 && (
-              <div className="flex items-center space-x-1 mt-2 text-red-600 text-sm">
-                <AlertCircle size={16} />
-                <span>Budget dépassé</span>
-              </div>
-            )}
-          </div>
+          <StatCard
+            title="Total Décaissements"
+            value={`${totalDecaissements.toLocaleString()} FCFA`}
+            icon={TrendingDown}
+            bgColor="bg-blue-100"
+            textColor="text-blue-800"
+            iconColor="text-blue-600"
+          />
+          <StatCard
+            title="Total Dépenses"
+            value={`${totalDepenses.toLocaleString()} FCFA`}
+            icon={TrendingUp}
+            bgColor="bg-red-100"
+            textColor="text-red-800"
+            iconColor="text-red-600"
+          />
+          <StatCard
+            title="Solde Restant"
+            value={`${solde.toLocaleString()} FCFA`}
+            icon={DollarSign}
+            bgColor={solde >= 0 ? 'bg-green-100' : 'bg-red-100'}
+            textColor={solde >= 0 ? 'text-green-800' : 'text-red-800'}
+            iconColor={solde >= 0 ? 'text-green-600' : 'text-red-600'}
+            description={solde < 0 ? 'Budget dépassé' : undefined}
+          />
         </div>
 
         <div className="bg-white rounded-lg shadow">
@@ -190,11 +197,13 @@ export default function FinancesPage() {
           onClose={() => {
             setShowForm(false);
             setEditingItem(null);
+            router.replace('/finances', undefined); // Clear URL params
           }}
           onSave={() => {
             setShowForm(false);
             setEditingItem(null);
             loadFinances();
+            router.replace('/finances', undefined); // Clear URL params
           }}
         />
       )}
@@ -209,44 +218,44 @@ function DecaissementsTable({ decaissements, onEdit, onDelete, canDelete }: any)
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Référence</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Description</th>
-            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Montant</th>
-            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Actions</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Référence</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200">
+        <tbody className="bg-white divide-y divide-gray-200">
           {decaissements.map((item: Decaissement) => (
             <tr key={item.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 text-sm text-gray-900">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                 {format(new Date(item.date), 'dd/MM/yyyy')}
               </td>
-              <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.reference_bancaire}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{item.reference_bancaire}</td>
               <td className="px-4 py-3 text-sm text-gray-600">{item.description || '-'}</td>
-              <td className="px-4 py-3 text-sm text-right font-semibold text-blue-600">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-blue-600">
                 {item.montant.toLocaleString()} FCFA
               </td>
-              <td className="px-4 py-3 text-sm text-right">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                 <div className="flex items-center justify-end space-x-2">
+                  <button
+                    onClick={() => onEdit(item)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                    title="Modifier"
+                  >
+                    <Edit size={16} />
+                  </button>
                   {canDelete && (
-                    <>
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => onDelete(item.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </>
+                    <button
+                      onClick={() => onDelete(item.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   )}
                 </div>
               </td>
@@ -265,32 +274,33 @@ function DepensesTable({ depenses, onEdit, onDelete, canDelete }: any) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Remarque</th>
-            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Montant</th>
-            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Actions</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Remarque</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200">
+        <tbody className="bg-white divide-y divide-gray-200">
           {depenses.map((item: Depense) => (
             <tr key={item.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 text-sm text-gray-900">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                 {format(new Date(item.date), 'dd/MM/yyyy')}
               </td>
-              <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.type_depense}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{item.type_depense}</td>
               <td className="px-4 py-3 text-sm text-gray-600">{item.remarque || '-'}</td>
-              <td className="px-4 py-3 text-sm text-right font-semibold text-red-600">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-red-600">
                 {item.montant.toLocaleString()} FCFA
               </td>
-              <td className="px-4 py-3 text-sm text-right">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                 <div className="flex items-center justify-end space-x-2">
                   <button
                     onClick={() => onEdit(item)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                    title="Modifier"
                   >
                     <Edit size={16} />
                   </button>
@@ -298,6 +308,7 @@ function DepensesTable({ depenses, onEdit, onDelete, canDelete }: any) {
                     <button
                       onClick={() => onDelete(item.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      title="Supprimer"
                     >
                       <Trash2 size={16} />
                     </button>
