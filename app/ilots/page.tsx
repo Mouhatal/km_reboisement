@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Ilot } from '@/lib/types';
 import dynamic from 'next/dynamic';
 import { Plus, Search, Download, Edit, Trash2, X, Leaf, AreaChart, BarChart3, MapPin } from 'lucide-react';
-import { format } from 'date-fns';
+import { format } = from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
 import { IlotsTable } from '@/components/ilots-table'; // Import the new IlotsTable component
 
@@ -275,6 +275,7 @@ function IlotForm({ ilot, onClose, onSave }: { ilot: Ilot | null; onClose: () =>
       calculatedTaux = (nombre_de_plants_survivants / nombre_de_plants) * 100;
     }
     setFormData(prev => ({ ...prev, taux_de_survie: parseFloat(calculatedTaux.toFixed(1)) }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.nombre_de_plants, formData.nombre_de_plants_survivants]);
 
 

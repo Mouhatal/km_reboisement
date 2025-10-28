@@ -408,7 +408,7 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
   const removeExistingFile = (fileUrl: string) => {
     setFormData(prev => ({
       ...prev,
-      recus: prev.recus.filter(url => url !== fileUrl)
+      recus: prev.recus.filter((url: string) => url !== fileUrl)
     }));
   };
 
