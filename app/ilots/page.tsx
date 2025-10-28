@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Ilot } from '@/lib/types';
 import dynamic from 'next/dynamic';
 import { Plus, Search, Download, Edit, Trash2, X, Leaf, AreaChart, BarChart3, MapPin } from 'lucide-react';
-import { format } = from 'date-fns';
+import { format } from 'date-fns'; // Correction ici
 import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
 import { IlotsTable } from '@/components/ilots-table'; // Import the new IlotsTable component
 
