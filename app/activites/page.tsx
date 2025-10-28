@@ -350,7 +350,7 @@ function ActiviteForm({ activite, onClose, onSave }: { activite: Activite | null
   const removeExistingFile = (fileUrl: string, field: 'factures' | 'liste_presence') => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field].filter(url => url !== fileUrl)
+      [field]: prev[field].filter((url: string) => url !== fileUrl)
     }));
   };
 
