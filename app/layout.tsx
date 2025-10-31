@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-context';
 import { LayoutWrapper } from '@/components/layout-wrapper';
+import ToastProvider from '@/components/ToastProvider'; // Import ToastProvider
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="fr">
       <body className={inter.className}>
         <AuthProvider>
+          <ToastProvider /> {/* Ajout du ToastProvider ici */}
           <LayoutWrapper>
             {children}
           </LayoutWrapper>

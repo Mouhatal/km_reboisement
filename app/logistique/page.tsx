@@ -7,7 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { Materiel, Ilot, Activite } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, AlertTriangle, Package } from 'lucide-react';
 import { format } from 'date-fns';
-import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
+import { StatCard } from '@/components/ui/stat-card';
+import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
 
 export default function LogistiquePage() {
   const { user, profile, loading } = useAuth();
@@ -65,7 +66,11 @@ export default function LogistiquePage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce matériel ?')) return;
 
     const { error } = await supabase.from('materiel').delete().eq('id', id);
-    if (!error) {
+    if (error) {
+      showError(`Erreur lors de la suppression du matériel: ${error.message}`);
+      console.error('Erreur lors de la suppression:', error);
+    } else {
+      showSuccess(`Matériel supprimé avec succès !`);
       loadMateriels();
     }
   };
@@ -349,6 +354,7 @@ function MaterielForm({ materiel, onClose, onSave }: { materiel: Materiel | null
     notes: materiel?.notes || '',
   });
   const [saving, setSaving] = useState(false);
+  const { user } = useAuth(); // Get user for created_by
 
   useEffect(() => {
     loadIlotsAndActivites();
@@ -373,16 +379,29 @@ function MaterielForm({ materiel, onClose, onSave }: { materiel: Materiel | null
         ...formData,
         ilot_affecte_id: formData.ilot_affecte_id || null,
         activite_affectee_id: formData.activite_affectee_id || null,
+        // created_by is only set on insert, not update
+        ...(materiel ? {} : { created_by: user?.id }),
       };
 
-      if (materiel) {
-        await supabase.from('materiel').update(dataToSave).eq('id', materiel.id);
-      } else {
-        await supabase.from('materiel').insert([dataToSave]);
+      let error = null;
+      if (materiel?.id) { // Check for materiel.id for update
+        const { error: updateError } = await supabase.from('materiel').update(dataToSave).eq('id', materiel.id);
+        error = updateError;
+      } else { // Insert
+        const { error: insertError } = await supabase.from('materiel').insert([dataToSave]);
+        error = insertError;
       }
-      onSave();
-    } catch (error) {
-      console.error('Erreur:', error);
+
+      if (error) {
+        showError(`Erreur lors de l'enregistrement du matériel: ${error.message}`);
+        console.error('Erreur:', error);
+      } else {
+        showSuccess(`Matériel enregistré avec succès !`);
+        onSave();
+      }
+    } catch (err: any) {
+      showError(`Une erreur inattendue est survenue: ${err.message}`);
+      console.error('Erreur inattendue:', err);
     } finally {
       setSaving(false);
     }

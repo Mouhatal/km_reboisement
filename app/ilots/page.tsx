@@ -7,9 +7,10 @@ import { supabase } from '@/lib/supabase';
 import { Ilot } from '@/lib/types';
 import dynamic from 'next/dynamic';
 import { Plus, Search, Download, Edit, Trash2, X, Leaf, AreaChart, BarChart3, MapPin } from 'lucide-react';
-import { format } from 'date-fns'; // Correction ici
-import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
-import { IlotsTable } from '@/components/ilots-table'; // Import the new IlotsTable component
+import { format } from 'date-fns';
+import { StatCard } from '@/components/ui/stat-card';
+import { IlotsTable } from '@/components/ilots-table';
+import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
 
 const MapComponent = dynamic(() => import('@/components/map-component').then(mod => ({ default: mod.MapComponent })), {
   ssr: false,
@@ -75,7 +76,11 @@ export default function IlotsPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet îlot ?')) return;
 
     const { error } = await supabase.from('ilots').delete().eq('id', id);
-    if (!error) {
+    if (error) {
+      showError(`Erreur lors de la suppression de l'îlot: ${error.message}`);
+      console.error('Erreur lors de la suppression:', error);
+    } else {
+      showSuccess(`Îlot supprimé avec succès !`);
       loadIlots();
     }
   };
@@ -287,16 +292,29 @@ function IlotForm({ ilot, onClose, onSave }: { ilot: Ilot | null; onClose: () =>
       const dataToSave = {
         ...formData,
         // taux_de_survie est déjà mis à jour par l'effet, donc on peut l'envoyer directement
+        // created_by is only set on insert, not update
+        ...(ilot ? {} : { created_by: user?.id }),
       };
 
-      if (ilot) {
-        await supabase.from('ilots').update(dataToSave).eq('id', ilot.id);
-      } else {
-        await supabase.from('ilots').insert([{ ...dataToSave, created_by: user?.id }]);
+      let error = null;
+      if (ilot?.id) { // Check for ilot.id for update
+        const { error: updateError } = await supabase.from('ilots').update(dataToSave).eq('id', ilot.id);
+        error = updateError;
+      } else { // Insert
+        const { error: insertError } = await supabase.from('ilots').insert([dataToSave]);
+        error = insertError;
       }
-      onSave();
-    } catch (error) {
-      console.error('Erreur:', error);
+
+      if (error) {
+        showError(`Erreur lors de l'enregistrement de l'îlot: ${error.message}`);
+        console.error('Erreur:', error);
+      } else {
+        showSuccess(`Îlot enregistré avec succès !`);
+        onSave();
+      }
+    } catch (err: any) {
+      showError(`Une erreur inattendue est survenue: ${err.message}`);
+      console.error('Erreur inattendue:', err);
     } finally {
       setSaving(false);
     }

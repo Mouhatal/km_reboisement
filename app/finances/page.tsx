@@ -7,8 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { Decaissement, Depense, Activite } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, DollarSign, TrendingUp, TrendingDown, AlertCircle, FileText, Upload } from 'lucide-react';
 import { format } from 'date-fns';
-import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
-import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage'; // Import storage utilities
+import { StatCard } from '@/components/ui/stat-card';
+import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage';
+import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
 
 export default function FinancesPage() {
   const { user, profile, loading } = useAuth();
@@ -64,7 +65,11 @@ export default function FinancesPage() {
 
     const table = type === 'decaissement' ? 'decaissements' : 'depenses';
     const { error } = await supabase.from(table).delete().eq('id', id);
-    if (!error) {
+    if (error) {
+      showError(`Erreur lors de la suppression du ${type}: ${error.message}`);
+      console.error('Erreur lors de la suppression:', error);
+    } else {
+      showSuccess(`${type === 'decaissement' ? 'Décaissement' : 'Dépense'} supprimé(e) avec succès !`);
       loadFinances();
     }
   };
@@ -91,7 +96,7 @@ export default function FinancesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 lg:py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion Financière</h1>
@@ -430,6 +435,7 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
         if (url) uploadedRecuUrls.push(url);
       }
 
+      let error = null;
       if (formType === 'decaissement') {
         const decaissementData = {
           date: formData.date,
@@ -437,15 +443,18 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
           reference_bancaire: formData.reference_bancaire,
           description: formData.description,
           recus: uploadedRecuUrls,
-          created_by: user?.id,
+          // created_by is only set on insert, not update
+          ...(item ? {} : { created_by: user?.id }),
         };
 
-        if (item && item.reference_bancaire) {
-          await supabase.from('decaissements').update(decaissementData).eq('id', item.id);
-        } else {
-          await supabase.from('decaissements').insert([decaissementData]);
+        if (item?.id) { // Check for item.id for update
+          const { error: updateError } = await supabase.from('decaissements').update(decaissementData).eq('id', item.id);
+          error = updateError;
+        } else { // Insert
+          const { error: insertError } = await supabase.from('decaissements').insert([decaissementData]);
+          error = insertError;
         }
-      } else {
+      } else { // formType === 'depense'
         const depenseData = {
           date: formData.date,
           montant: formData.montant,
@@ -453,19 +462,29 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
           type_depense: formData.type_depense,
           remarque: formData.remarque,
           recus: uploadedRecuUrls,
-          created_by: user?.id,
+          // created_by is only set on insert, not update
+          ...(item ? {} : { created_by: user?.id }),
         };
 
-        if (item && item.type_depense) {
-          await supabase.from('depenses').update(depenseData).eq('id', item.id);
-        } else {
-          await supabase.from('depenses').insert([depenseData]);
+        if (item?.id) { // Check for item.id for update
+          const { error: updateError } = await supabase.from('depenses').update(depenseData).eq('id', item.id);
+          error = updateError;
+        } else { // Insert
+          const { error: insertError } = await supabase.from('depenses').insert([depenseData]);
+          error = insertError;
         }
       }
 
-      onSave();
-    } catch (error) {
-      console.error('Erreur:', error);
+      if (error) {
+        showError(`Erreur lors de l'enregistrement: ${error.message}`);
+        console.error('Erreur lors de l\'enregistrement:', error);
+      } else {
+        showSuccess(`${formType === 'decaissement' ? 'Décaissement' : 'Dépense'} enregistré(e) avec succès !`);
+        onSave();
+      }
+    } catch (err: any) {
+      showError(`Une erreur inattendue est survenue: ${err.message}`);
+      console.error('Erreur inattendue:', err);
     } finally {
       setSaving(false);
     }

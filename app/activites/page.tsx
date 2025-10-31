@@ -7,8 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { Activite, Ilot } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, Upload, Users, Calendar, DollarSign, FileText, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
-import { StatCard } from '@/components/ui/stat-card'; // Import StatCard
-import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage'; // Import storage utilities
+import { StatCard } from '@/components/ui/stat-card';
+import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage';
+import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
 
 export default function ActivitesPage() {
   const { user, profile, loading } = useAuth();
@@ -59,7 +60,11 @@ export default function ActivitesPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette activité ?')) return;
 
     const { error } = await supabase.from('activites').delete().eq('id', id);
-    if (!error) {
+    if (error) {
+      showError(`Erreur lors de la suppression de l'activité: ${error.message}`);
+      console.error('Erreur lors de la suppression:', error);
+    } else {
+      showSuccess(`Activité supprimée avec succès !`);
       loadActivites();
     }
   };
@@ -389,33 +394,56 @@ function ActiviteForm({ activite, onClose, onSave }: { activite: Activite | null
         ...formData,
         factures: uploadedFactureUrls,
         liste_presence: uploadedListePresenceUrls,
-        created_by: user?.id, // Only set on creation
+        // created_by is only set on insert, not update
+        ...(activite ? {} : { created_by: user?.id }),
       };
 
-      if (activite) {
-        await supabase.from('activites').update(activityData).eq('id', activite.id);
-      } else {
-        const { data } = await supabase
+      let error = null;
+      if (activite?.id) { // Check for activite.id for update
+        const { error: updateError } = await supabase.from('activites').update(activityData).eq('id', activite.id);
+        error = updateError;
+      } else { // Insert
+        const { data, error: insertError } = await supabase
           .from('activites')
           .insert([activityData])
           .select()
           .single();
         activiteId = data?.id;
+        error = insertError;
       }
 
-      if (activiteId) {
-        await supabase.from('activites_ilots').delete().eq('activite_id', activiteId);
+      if (error) {
+        showError(`Erreur lors de l'enregistrement de l'activité: ${error.message}`);
+        console.error('Erreur:', error);
+      } else {
+        showSuccess(`Activité enregistrée avec succès !`);
+        if (activiteId) {
+          // Handle activites_ilots relationship
+          const { error: deleteError } = await supabase.from('activites_ilots').delete().eq('activite_id', activiteId);
+          if (deleteError) {
+            showError(`Erreur lors de la mise à jour des îlots associés: ${deleteError.message}`);
+            console.error('Erreur lors de la suppression des relations ilots:', deleteError);
+            setSaving(false); // Stop saving if this fails
+            return;
+          }
 
-        if (selectedIlots.length > 0) {
-          await supabase.from('activites_ilots').insert(
-            selectedIlots.map(ilot_id => ({ activite_id: activiteId, ilot_id }))
-          );
+          if (selectedIlots.length > 0) {
+            const { error: insertIlotsError } = await supabase.from('activites_ilots').insert(
+              selectedIlots.map(ilot_id => ({ activite_id: activiteId, ilot_id }))
+            );
+            if (insertIlotsError) {
+              showError(`Erreur lors de l'association des îlots: ${insertIlotsError.message}`);
+              console.error('Erreur lors de l\'insertion des relations ilots:', insertIlotsError);
+              setSaving(false); // Stop saving if this fails
+              return;
+            }
+          }
         }
+        onSave();
       }
-
-      onSave();
-    } catch (error) {
-      console.error('Erreur:', error);
+    } catch (err: any) {
+      showError(`Une erreur inattendue est survenue: ${err.message}`);
+      console.error('Erreur inattendue:', err);
     } finally {
       setSaving(false);
     }
