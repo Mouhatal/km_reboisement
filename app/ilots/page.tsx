@@ -10,7 +10,7 @@ import { Plus, Search, Download, Edit, Trash2, X, Leaf, AreaChart, BarChart3, Ma
 import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card';
 import { IlotsTable } from '@/components/ilots-table';
-import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
+import { showSuccess, showError } from '@/lib/toast'; // Import toast utilities from lib/toast
 
 const MapComponent = dynamic(() => import('@/components/map-component').then(mod => ({ default: mod.MapComponent })), {
   ssr: false,

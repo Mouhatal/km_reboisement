@@ -8,7 +8,7 @@ import { Materiel, Ilot, Activite } from '@/lib/types';
 import { Plus, Search, Download, Edit, Trash2, X, AlertTriangle, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card';
-import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
+import { showSuccess, showError } from '@/lib/toast'; // Import toast utilities from lib/toast
 
 export default function LogistiquePage() {
   const { user, profile, loading } = useAuth();

@@ -9,7 +9,7 @@ import { Plus, Search, Download, Edit, Trash2, X, DollarSign, TrendingUp, Trendi
 import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card';
 import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage';
-import { showSuccess, showError } from '@/utils/toast'; // Import toast utilities
+import { showSuccess, showError } from '@/lib/toast'; // Import toast utilities from lib/toast
 
 export default function FinancesPage() {
   const { user, profile, loading } = useAuth();
