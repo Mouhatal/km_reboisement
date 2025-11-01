@@ -68,7 +68,7 @@ export interface Materiel {
   activite_affectee_id: string | null;
   alerte_maintenance: boolean;
   notes: string | null;
-  created_by: string; // Ajouté pour correspondre au schéma de la DB
+  created_by: string | null; // Modifié pour permettre null
   created_at: string;
   updated_at: string;
 }
