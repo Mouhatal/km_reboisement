@@ -32,6 +32,7 @@ export interface IlotHistorique {
   ilot_id: string;
   taux_de_survie: number;
   nombre_de_plants: number;
+  nombre_de_plants_survivants: number; // Nouveau champ
   observations: string | null;
   photos: string[];
   date_de_suivi: string;
@@ -67,6 +68,7 @@ export interface Materiel {
   activite_affectee_id: string | null;
   alerte_maintenance: boolean;
   notes: string | null;
+  created_by: string; // Ajouté pour correspondre au schéma de la DB
   created_at: string;
   updated_at: string;
 }
