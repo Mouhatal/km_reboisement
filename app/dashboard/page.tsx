@@ -24,7 +24,6 @@ export default function Dashboard() {
     if (!loading && !user) {
       router.push('/');
     }
-    // Admin check is now handled by the navigation component, but keeping it here for direct access protection
     if (!loading && user && profile?.role !== 'administrateur') {
       router.push('/ilots');
     }
@@ -91,8 +90,21 @@ export default function Dashboard() {
     }
   };
 
-  if (loading || !user || profile?.role !== 'administrateur') {
-    return null; // Render nothing or a loading spinner while redirecting or unauthorized
+  // Affiche un message de chargement ou de redirection au lieu de null
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Chargement du tableau de bord...</div>
+      </div>
+    );
+  }
+
+  if (user && profile?.role !== 'administrateur') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Accès non autorisé, redirection...</div>
+      </div>
+    );
   }
 
   return (

@@ -23,8 +23,13 @@ export default function Home() {
     );
   }
 
+  // Si l'utilisateur est connecté et que le chargement est terminé, nous sommes en attente de redirection.
   if (user) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Redirection vers le tableau de bord...</div>
+      </div>
+    );
   }
 
   return <LoginForm />;
