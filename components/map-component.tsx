@@ -22,7 +22,7 @@ if (typeof window !== 'undefined') {
 
   // The delete operation is still necessary at runtime for some environments
   // but TypeScript will now allow it due to the interface extension.
-  (L.Icon.Default.prototype as DefaultIconOptions)._getIconUrl = undefined;
+  (L.Icon.Default.prototype as any)._getIconUrl = undefined;
 }
 
 const icon = L.icon({
