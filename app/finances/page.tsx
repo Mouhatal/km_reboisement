@@ -249,7 +249,7 @@ function DecaissementsTable({ decaissements, onEdit, onDelete, canDelete }: any)
               <td className="px-4 py-3 text-sm text-gray-600">
                 {item.recus && item.recus.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    {item.recus.map((url, index) => (
+                    {item.recus.map((url: string, index: number) => (
                       <a
                         key={`recu-${index}`}
                         href={url}
@@ -326,7 +326,7 @@ function DepensesTable({ depenses, onEdit, onDelete, canDelete }: any) {
               <td className="px-4 py-3 text-sm text-gray-600">
                 {item.recus && item.recus.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    {item.recus.map((url, index) => (
+                    {item.recus.map((url: string, index: number) => (
                       <a
                         key={`recu-${index}`}
                         href={url}
@@ -642,7 +642,7 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
               className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
             />
             <div className="mt-2 space-y-1">
-              {formData.recus.map((url, index) => (
+              {formData.recus.map((url: string, index: number) => (
                 <div key={`existing-recu-${index}`} className="flex items-center justify-between bg-gray-50 p-2 rounded-md text-sm">
                   <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center space-x-1">
                     <FileText size={16} />
