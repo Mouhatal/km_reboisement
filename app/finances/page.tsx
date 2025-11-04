@@ -431,7 +431,8 @@ function FinanceForm({ type, item, onClose, onSave }: any) {
       // Upload new receipts
       for (const file of newRecus) {
         const filePath = generateUniqueFilePath('finance_recus', file.name);
-        const url = await uploadFileToSupabase(file, 'activite-documents', filePath); // Using 'activite-documents' bucket for now
+        // MODIFICATION ICI : Utilisation du nouveau bucket 'finance-documents'
+        const url = await uploadFileToSupabase(file, 'finance-documents', filePath); 
         if (url) uploadedRecuUrls.push(url);
       }
 
