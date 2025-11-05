@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card';
 import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage';
 import { showSuccess, showError } from '@/lib/toast'; // Import toast utilities from lib/toast
+import { exportToExcel } from '@/lib/excel-export'; // Import the new excel export utility
 
 export default function ActivitesPage() {
   const { user, profile, loading } = useAuth();
@@ -69,29 +70,40 @@ export default function ActivitesPage() {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ['Type', 'Date', 'Objectif', 'Public cible', 'Participants', 'Montant décaissé'];
-    const rows = filteredActivites.map(a => [
-      a.type_activite,
-      a.date,
-      a.objectif,
-      a.public_cible || '',
-      a.nombre_participants,
-      a.montant_decaisse
-    ]);
-
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `activites_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
   const totalActivites = activites.length;
   const totalParticipants = activites.reduce((sum, act) => sum + act.nombre_participants, 0);
   const totalMontantDecaisse = activites.reduce((sum, act) => sum + act.montant_decaisse, 0);
+
+  const exportToXLSX = () => {
+    const headers = ['Type', 'Date', 'Objectif', 'Public cible', 'Participants', 'Montant décaissé', 'Commentaires', 'Photos', 'Factures', 'Listes de présence'];
+    const rows = filteredActivites.map(a => [
+      a.type_activite,
+      format(new Date(a.date), 'dd/MM/yyyy'),
+      a.objectif,
+      a.public_cible || '',
+      a.nombre_participants,
+      a.montant_decaisse,
+      a.commentaires || '',
+      a.photos?.join(', ') || '',
+      a.factures?.join(', ') || '',
+      a.liste_presence?.join(', ') || ''
+    ]);
+
+    const summaryData = {
+      title: 'Résumé des Activités',
+      data: [
+        { label: 'Total Activités', value: totalActivites },
+        { label: 'Total Participants', value: totalParticipants.toLocaleString() },
+        { label: 'Montant Total Décaissé', value: `${totalMontantDecaisse.toLocaleString()} FCFA` },
+      ],
+    };
+
+    exportToExcel(
+      `activites_${new Date().toISOString().split('T')[0]}`,
+      [{ name: 'Activités', headers: headers, rows: rows }],
+      summaryData
+    );
+  };
 
   if (loading || !user) {
     return null;
@@ -166,11 +178,11 @@ export default function ActivitesPage() {
                 </div>
 
                 <button
-                  onClick={exportToCSV}
+                  onClick={exportToXLSX}
                   className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                 >
                   <Download size={20} />
-                  <span>Export CSV</span>
+                  <span>Export XLSX</span>
                 </button>
               </div>
 

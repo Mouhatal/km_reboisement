@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card';
 import { IlotsTable } from '@/components/ilots-table';
 import { showSuccess, showError } from '@/lib/toast'; // Import toast utilities from lib/toast
+import { exportToExcel } from '@/lib/excel-export'; // Import the new excel export utility
 
 const MapComponent = dynamic(() => import('@/components/map-component').then(mod => ({ default: mod.MapComponent })), {
   ssr: false,
@@ -85,31 +86,43 @@ export default function IlotsPage() {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ['Nom', 'Superficie (ha)', 'Type de sol', 'Nombre de plants', 'Plants survivants', 'Taux de survie (%)', 'Date de suivi', 'Observations'];
+  const totalSuperficie = ilots.reduce((sum, ilot) => sum + ilot.superficie_ha, 0);
+  const totalPlants = ilots.reduce((sum, ilot) => sum + (ilot.nombre_de_plants || 0), 0);
+  const totalPlantsSurvivants = ilots.reduce((sum, ilot) => sum + (ilot.nombre_de_plants_survivants || 0), 0);
+  const tauxSurvieMoyen = ilots.length > 0 ? ilots.reduce((sum, ilot) => sum + (ilot.taux_de_survie || 0), 0) / ilots.length : 0;
+
+  const exportToXLSX = () => {
+    const headers = ['Nom', 'Superficie (ha)', 'Type de sol', 'Latitude', 'Longitude', 'Plants plantés', 'Plants survivants', 'Taux de survie (%)', 'Date de suivi', 'Observations'];
     const rows = filteredIlots.map(i => [
       i.nom,
       i.superficie_ha,
       i.type_de_sol,
+      i.latitude,
+      i.longitude,
       i.nombre_de_plants,
       i.nombre_de_plants_survivants,
       i.taux_de_survie,
-      i.date_de_suivi,
+      format(new Date(i.date_de_suivi), 'dd/MM/yyyy'),
       i.observations || ''
     ]);
 
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ilots_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
+    const summaryData = {
+      title: 'Résumé des Îlots',
+      data: [
+        { label: 'Total Îlots', value: ilots.length },
+        { label: 'Superficie Totale', value: `${totalSuperficie.toFixed(2)} ha` },
+        { label: 'Total Plants Plantés', value: totalPlants.toLocaleString() },
+        { label: 'Total Plants Survivants', value: totalPlantsSurvivants.toLocaleString() },
+        { label: 'Taux de Survie Moyen', value: `${tauxSurvieMoyen.toFixed(1)}%` },
+      ],
+    };
 
-  const totalSuperficie = ilots.reduce((sum, ilot) => sum + ilot.superficie_ha, 0);
-  const totalPlants = ilots.reduce((sum, ilot) => sum + (ilot.nombre_de_plants || 0), 0);
-  const tauxSurvieMoyen = ilots.length > 0 ? ilots.reduce((sum, ilot) => sum + (ilot.taux_de_survie || 0), 0) / ilots.length : 0;
+    exportToExcel(
+      `ilots_${new Date().toISOString().split('T')[0]}`,
+      [{ name: 'Îlots', headers: headers, rows: rows }],
+      summaryData
+    );
+  };
 
   if (loading || !user) {
     return null;
@@ -197,11 +210,11 @@ export default function IlotsPage() {
                     Carte
                   </button>
                   <button
-                    onClick={exportToCSV}
+                    onClick={exportToXLSX}
                     className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                   >
                     <Download size={20} />
-                    <span>Export CSV</span>
+                    <span>Export XLSX</span>
                   </button>
                 </div>
               </div>

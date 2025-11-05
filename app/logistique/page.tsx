@@ -9,6 +9,7 @@ import { Plus, Search, Download, Edit, Trash2, X, AlertTriangle, Package } from 
 import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card';
 import { showSuccess, showError } from '@/lib/toast'; // Import toast utilities from lib/toast
+import { exportToExcel } from '@/lib/excel-export'; // Import the new excel export utility
 
 export default function LogistiquePage() {
   const { user, profile, loading } = useAuth();
@@ -75,27 +76,6 @@ export default function LogistiquePage() {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ['Type', 'Quantité', 'État', 'Emplacement', 'Date acquisition', 'Alerte maintenance', 'Notes'];
-    const rows = filteredMateriels.map(m => [
-      m.type,
-      m.quantite,
-      m.etat,
-      m.emplacement || '',
-      m.date_acquisition,
-      m.alerte_maintenance ? 'Oui' : 'Non',
-      m.notes || ''
-    ]);
-
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `materiel_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
   const getStatsByEtat = () => {
     return {
       total: materiels.length,
@@ -105,6 +85,40 @@ export default function LogistiquePage() {
       remplace: materiels.filter(m => m.etat === 'remplace').length,
       alertes: materiels.filter(m => m.alerte_maintenance).length,
     };
+  };
+
+  const exportToXLSX = () => {
+    const headers = ['Type', 'Quantité', 'État', 'Emplacement', 'Date acquisition', 'Alerte maintenance', 'Notes', 'Îlot affecté', 'Activité affectée'];
+    const rows = filteredMateriels.map(m => [
+      m.type,
+      m.quantite,
+      getEtatLabel(m.etat),
+      m.emplacement || '',
+      format(new Date(m.date_acquisition), 'dd/MM/yyyy'),
+      m.alerte_maintenance ? 'Oui' : 'Non',
+      m.notes || '',
+      m.ilot_affecte_id || '', // You might want to fetch ilot name here
+      m.activite_affectee_id || '' // You might want to fetch activite type/date here
+    ]);
+
+    const stats = getStatsByEtat();
+    const summaryData = {
+      title: 'Résumé Logistique',
+      data: [
+        { label: 'Total Matériel', value: stats.total },
+        { label: 'Disponible', value: stats.disponible },
+        { label: 'Utilisé', value: stats.utilise },
+        { label: 'En panne', value: stats.en_panne },
+        { label: 'Remplacé', value: stats.remplace },
+        { label: 'Alertes Maintenance', value: stats.alertes },
+      ],
+    };
+
+    exportToExcel(
+      `materiel_${new Date().toISOString().split('T')[0]}`,
+      [{ name: 'Matériel', headers: headers, rows: rows }],
+      summaryData
+    );
   };
 
   if (loading || !user) {
@@ -223,11 +237,11 @@ export default function LogistiquePage() {
                     En panne
                   </button>
                   <button
-                    onClick={exportToCSV}
+                    onClick={exportToXLSX}
                     className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                   >
                     <Download size={20} />
-                    <span>Export CSV</span>
+                    <span>Export XLSX</span>
                   </button>
                 </div>
               </div>
