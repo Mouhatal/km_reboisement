@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { StatCard } from '@/components/ui/stat-card';
 import { uploadFileToSupabase, generateUniqueFilePath } from '@/lib/supabase-storage';
 import { showSuccess, showError } from '@/lib/toast'; // Import toast utilities from lib/toast
+import { exportToExcel } from '@/lib/excel-export'; // Import the new excel export utility
 
 export default function FinancesPage() {
   const { user, profile, loading } = useAuth();
@@ -84,6 +85,44 @@ export default function FinancesPage() {
 
   const getSolde = () => {
     return getTotalDecaissements() - getTotalDepenses();
+  };
+
+  const exportToXLSX = () => {
+    const decaissementsHeaders = ['Date', 'Référence', 'Description', 'Montant', 'Reçus'];
+    const decaissementsRows = decaissements.map(d => [
+      format(new Date(d.date), 'dd/MM/yyyy'),
+      d.reference_bancaire,
+      d.description || '',
+      d.montant,
+      d.recus?.join(', ') || ''
+    ]);
+
+    const depensesHeaders = ['Date', 'Type', 'Remarque', 'Montant', 'Reçus'];
+    const depensesRows = depenses.map(d => [
+      format(new Date(d.date), 'dd/MM/yyyy'),
+      d.type_depense,
+      d.remarque || '',
+      d.montant,
+      d.recus?.join(', ') || ''
+    ]);
+
+    const summaryData = {
+      title: 'Résumé Financier',
+      data: [
+        { label: 'Total Décaissements', value: `${getTotalDecaissements().toLocaleString()} FCFA` },
+        { label: 'Total Dépenses', value: `${getTotalDepenses().toLocaleString()} FCFA` },
+        { label: 'Solde Restant', value: `${getSolde().toLocaleString()} FCFA` },
+      ],
+    };
+
+    exportToExcel(
+      `finances_${new Date().toISOString().split('T')[0]}`,
+      [
+        { name: 'Décaissements', headers: decaissementsHeaders, rows: decaissementsRows },
+        { name: 'Dépenses', headers: depensesHeaders, rows: depensesRows },
+      ],
+      summaryData
+    );
   };
 
   if (loading || !user) {
@@ -171,26 +210,39 @@ export default function FinancesPage() {
           <div className="p-4">
             {loadingData ? (
               <div className="text-center py-12">Chargement...</div>
-            ) : activeTab === 'decaissements' ? (
-              <DecaissementsTable
-                decaissements={decaissements}
-                onEdit={(item: Decaissement) => {
-                  setEditingItem(item);
-                  setShowForm(true);
-                }}
-                onDelete={(id: string) => handleDelete(id, 'decaissement')}
-                canDelete={profile?.role === 'administrateur'}
-              />
             ) : (
-              <DepensesTable
-                depenses={depenses}
-                onEdit={(item: Depense) => {
-                  setEditingItem(item);
-                  setShowForm(true);
-                }}
-                onDelete={(id: string) => handleDelete(id, 'depense')}
-                canDelete={profile?.role === 'administrateur'}
-              />
+              <>
+                <div className="flex justify-end mb-4">
+                  <button
+                    onClick={exportToXLSX}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    <Download size={20} />
+                    <span>Export XLSX</span>
+                  </button>
+                </div>
+                {activeTab === 'decaissements' ? (
+                  <DecaissementsTable
+                    decaissements={decaissements}
+                    onEdit={(item: Decaissement) => {
+                      setEditingItem(item);
+                      setShowForm(true);
+                    }}
+                    onDelete={(id: string) => handleDelete(id, 'decaissement')}
+                    canDelete={profile?.role === 'administrateur'}
+                  />
+                ) : (
+                  <DepensesTable
+                    depenses={depenses}
+                    onEdit={(item: Depense) => {
+                      setEditingItem(item);
+                      setShowForm(true);
+                    }}
+                    onDelete={(id: string) => handleDelete(id, 'depense')}
+                    canDelete={profile?.role === 'administrateur'}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
